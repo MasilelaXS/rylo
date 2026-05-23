@@ -8,7 +8,8 @@
     "scheme": "pieter",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.danneldev.Pieter"
     },
     "android": {
       "adaptiveIcon": {

@@ -320,8 +320,8 @@ export default function HistoryScreen() {
                 <Text style={s.analyticsTitle}>30-Day Activity</Text>
                 <View style={s.heatmap}>
                   {heatmapData.map((cell, i) => {
-                    const rate = cell.total > 0 ? cell.doneCount / cell.total : -1;
-                    const bg = cell.total === 0
+                    const rate = cell.count > 0 ? cell.doneCount / cell.count : -1;
+                    const bg = cell.count === 0
                       ? COLORS.surfaceBorder
                       : rate >= 0.8 ? COLORS.success
                       : rate >= 0.5 ? COLORS.primary
@@ -331,7 +331,7 @@ export default function HistoryScreen() {
                       <View
                         key={i}
                         style={[s.heatCell, { backgroundColor: bg }]}
-                        accessibilityLabel={`${cell.date.toLocaleDateString()}: ${cell.doneCount}/${cell.total}`}
+                        accessibilityLabel={`${cell.date.toLocaleDateString()}: ${cell.doneCount}/${cell.count}`}
                       />
                     );
                   })}
