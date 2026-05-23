@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { recordCompletion } from '../database/categoryStreaks';
 import {
     completeTask,
     deleteTask,
@@ -8,6 +9,7 @@ import {
     insertTask,
     updateTask,
 } from '../database/tasks';
+import { shouldForceDecision } from '../services/escalationService';
 import type { DailyStats, Task } from '../types';
 import { generateId } from '../utils/constants';
 
@@ -35,12 +37,23 @@ interface TaskStore {
   overdueTasks: Task[];
   loading: boolean;
 
+  // ── UI-level pending prompts (consumed by GlobalModalsHost) ────────────
+  pendingExcuseTaskId: string | null;
+  pendingDecisionTaskId: string | null;
+  pendingFollowUpTaskId: string | null;
+  pendingCallConfirmTaskId: string | null;
+
   loadAll: () => Promise<void>;
   addTask: (task: Task) => Promise<void>;
   editTask: (task: Partial<Task> & { id: string }) => Promise<void>;
   removeTask: (id: string) => Promise<void>;
   markComplete: (id: string) => Promise<void>;
-  snoozeTask: (id: string) => Promise<void>;
+  snoozeTask: (id: string) => Promise<{ decisionRequired: boolean }>;
+  forceCancel: (id: string) => Promise<void>;
+  rescheduleBy: (id: string, minutes: number) => Promise<void>;
+  clearPending: (kind: 'excuse' | 'decision' | 'followUp' | 'callConfirm') => void;
+  requestCallConfirm: (id: string) => void;
+
   getDailyStats: () => DailyStats;
   getWeeklyBars: () => WeeklyBar[];
   getAvoidanceTasks: () => Task[];   // tasks with snoozeCount >= 3 or severely overdue
@@ -55,17 +68,49 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
   overdueTasks: [],
   loading: false,
 
+  pendingExcuseTaskId: null,
+  pendingDecisionTaskId: null,
+  pendingFollowUpTaskId: null,
+  pendingCallConfirmTaskId: null,
+
+  clearPending: (kind) => set((s) => {
+    if (kind === 'excuse')      return { ...s, pendingExcuseTaskId: null };
+    if (kind === 'decision')    return { ...s, pendingDecisionTaskId: null };
+    if (kind === 'followUp')    return { ...s, pendingFollowUpTaskId: null };
+    if (kind === 'callConfirm') return { ...s, pendingCallConfirmTaskId: null };
+    return s;
+  }),
+
+  requestCallConfirm: (id) => set({ pendingCallConfirmTaskId: id }),
+
+  forceCancel: async (id) => {
+    await updateTask({ id, status: 'cancelled' });
+    await get().loadAll();
+  },
+
+  rescheduleBy: async (id, minutes) => {
+    const t = get().tasks.find((x) => x.id === id);
+    if (!t) return;
+    await updateTask({
+      id,
+      status: 'snoozed',
+      snoozeCount: t.snoozeCount + 1,
+      dueDate: Date.now() + minutes * 60_000,
+    });
+    await get().loadAll();
+  },
+
   loadAll: async () => {
     set({ loading: true });
     try {
-      const [tasks, todayTasks, overdueTasks] = await Promise.all([
+      const [all, today, overdue] = await Promise.all([
         getAllTasks(),
         getTodaysTasks(),
         getOverdueTasks(),
       ]);
-      set({ tasks, todayTasks, overdueTasks, loading: false });
-    } catch (e) {
-      console.error('[TaskStore] loadAll failed:', e);
+      set({ tasks: all, todayTasks: today, overdueTasks: overdue, loading: false });
+    } catch (err) {
+      console.error('[taskStore.loadAll]', err);
       set({ loading: false });
     }
   },
@@ -82,18 +127,15 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
 
   removeTask: async (id) => {
     await deleteTask(id);
-    set((s) => ({
-      tasks: s.tasks.filter((t) => t.id !== id),
-      todayTasks: s.todayTasks.filter((t) => t.id !== id),
-      overdueTasks: s.overdueTasks.filter((t) => t.id !== id),
-    }));
+    await get().loadAll();
   },
 
   markComplete: async (id) => {
+    const before = get().tasks.find((t) => t.id === id);
     await completeTask(id);
 
     // Spawn next occurrence for recurring tasks
-    const task = get().tasks.find((t) => t.id === id);
+    const task = before;
     if (task && task.repeatType !== 'none') {
       const nd = nextDueDate(task);
       if (nd > 0) {
@@ -111,7 +153,12 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
       }
     }
 
-    // Update streak in settingsStore
+    // Per-category streak
+    try {
+      await recordCompletion(task?.category ?? 'general');
+    } catch { /* table may not exist yet on cold start */ }
+
+    // Update legacy global streak in settingsStore
     try {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const { useSettingsStore } = require('./settingsStore') as typeof import('./settingsStore');
@@ -137,19 +184,45 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
       });
     } catch { /* settings not ready */ }
 
+    // Follow-up prompt for communication tasks
+    if (task?.category === 'communication') {
+      set({ pendingFollowUpTaskId: id });
+    }
+
     await get().loadAll();
   },
 
   snoozeTask: async (id) => {
     const task = get().tasks.find((t) => t.id === id);
-    if (!task) return;
+    if (!task) return { decisionRequired: false };
+
+    // Reminder mode from settings (controls escalation threshold)
+    let mode: import('../types').ReminderMode = 'strict';
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { useSettingsStore } = require('./settingsStore') as typeof import('./settingsStore');
+      mode = useSettingsStore.getState().settings.reminderMode ?? 'strict';
+    } catch { /* default */ }
+
+    // Increment-only check against threshold (don't push the due date yet —
+    // the user must justify the snooze first).
+    const projected: Task = { ...task, snoozeCount: task.snoozeCount + 1 };
+    if (shouldForceDecision(projected, mode)) {
+      set({ pendingDecisionTaskId: id });
+      return { decisionRequired: true };
+    }
+
+    // Cost-of-snooze: progressively shorter snoozes punish avoidance.
+    const minutes = task.snoozeCount === 0 ? 30 : task.snoozeCount === 1 ? 20 : task.snoozeCount === 2 ? 10 : 5;
     await updateTask({
       id,
       status: 'snoozed',
       snoozeCount: task.snoozeCount + 1,
-      dueDate: task.dueDate + 30 * 60 * 1000, // +30min
+      dueDate: Date.now() + minutes * 60 * 1000,
     });
+    set({ pendingExcuseTaskId: id });
     await get().loadAll();
+    return { decisionRequired: false };
   },
 
   getDailyStats: () => {

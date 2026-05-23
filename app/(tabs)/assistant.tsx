@@ -383,9 +383,9 @@ export default function AssistantScreen() {
                 <View style={s.welcomeOrb}>
                   <Ionicons name="sparkles" size={30} color={COLORS.primary} />
                 </View>
-                <Text style={s.welcomeTitle}>Hi, I'm Pieter AI</Text>
+                <Text style={s.welcomeTitle}>Hi, I&apos;m Pieter AI</Text>
                 <Text style={s.welcomeSub}>
-                  Ask me anything about your tasks, or say "create a task" to add one directly from our conversation.
+                  Ask me anything about your tasks, or say &quot;create a task&quot; to add one directly from our conversation.
                 </Text>
               </View>
               <Text style={s.starterLabel}>Try asking…</Text>

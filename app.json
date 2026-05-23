@@ -24,7 +24,19 @@
         "android.permission.WAKE_LOCK"
       ],
       "predictiveBackGestureEnabled": false,
-      "package": "com.danneldev.Pieter"
+      "package": "com.danneldev.Pieter",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "category": ["DEFAULT", "BROWSABLE"],
+          "data": [{ "scheme": "pieter" }]
+        },
+        {
+          "action": "SEND",
+          "category": ["DEFAULT"],
+          "data": [{ "mimeType": "text/plain" }]
+        }
+      ]
     },
     "web": {
       "output": "static",
@@ -53,7 +65,9 @@
           }
         }
       ],
-      "expo-sqlite"
+      "expo-sqlite",
+      "expo-sharing",
+      "expo-quick-actions"
     ],
     "experiments": {
       "typedRoutes": true,

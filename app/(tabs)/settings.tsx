@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, Share, StatusBar, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BackgroundImage from '../../src/components/BackgroundImage';
+import BackupSection from '../../src/components/BackupSection';
 import { cancelAllNotifications, scheduleHourlyReminders } from '../../src/notifications/notificationService';
 import { useNoteStore } from '../../src/store/noteStore';
 import { useProjectStore } from '../../src/store/projectStore';
@@ -369,6 +370,9 @@ export default function SettingsScreen() {
                 : <Ionicons name="share-outline" size={18} color={COLORS.primary} />}
             </TouchableOpacity>
           </View>
+
+          <Text style={s.sectionLabel}>Encrypted Backup</Text>
+          <BackupSection />
 
           <View style={{ height: 110 }} />
         </ScrollView>

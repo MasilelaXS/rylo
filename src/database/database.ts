@@ -54,6 +54,10 @@ _db.execSync(`CREATE TABLE IF NOT EXISTS communication_logs (
 try { _db.execSync(`ALTER TABLE tasks ADD COLUMN location TEXT DEFAULT ''`); } catch (_) {}
 try { _db.execSync(`ALTER TABLE tasks ADD COLUMN estimated_minutes INTEGER DEFAULT 0`); } catch (_) {}
 try { _db.execSync(`ALTER TABLE tasks ADD COLUMN completed_at INTEGER`); } catch (_) {}
+try { _db.execSync(`ALTER TABLE tasks ADD COLUMN committed INTEGER DEFAULT 0`); } catch (_) {}
+try { _db.execSync(`ALTER TABLE tasks ADD COLUMN category TEXT DEFAULT 'general'`); } catch (_) {}
+try { _db.execSync(`ALTER TABLE tasks ADD COLUMN comm_status TEXT`); } catch (_) {}
+try { _db.execSync(`ALTER TABLE tasks ADD COLUMN difficulty INTEGER DEFAULT 0`); } catch (_) {}
 
 _db.execSync(`CREATE TABLE IF NOT EXISTS notes (
   id TEXT PRIMARY KEY NOT NULL,
@@ -72,6 +76,58 @@ _db.execSync(`CREATE TABLE IF NOT EXISTS subtasks (
   created_at INTEGER NOT NULL
 )`);
 
+// ─── Execution-Enforcement tables ──────────────────────────────────────────
+_db.execSync(`CREATE TABLE IF NOT EXISTS excuses (
+  id TEXT PRIMARY KEY NOT NULL,
+  task_id TEXT NOT NULL,
+  reason TEXT DEFAULT '',
+  category TEXT DEFAULT '',
+  created_at INTEGER NOT NULL
+)`);
+
+_db.execSync(`CREATE TABLE IF NOT EXISTS commitments (
+  id TEXT PRIMARY KEY NOT NULL,
+  task_id TEXT NOT NULL,
+  contact TEXT DEFAULT '',
+  accountability_message TEXT DEFAULT '',
+  triggered INTEGER DEFAULT 0,
+  created_at INTEGER NOT NULL
+)`);
+
+_db.execSync(`CREATE TABLE IF NOT EXISTS follow_ups (
+  id TEXT PRIMARY KEY NOT NULL,
+  source_task_id TEXT NOT NULL,
+  chase_task_id TEXT NOT NULL,
+  expected_reply_at INTEGER NOT NULL,
+  created_at INTEGER NOT NULL
+)`);
+
+_db.execSync(`CREATE TABLE IF NOT EXISTS comm_drafts (
+  id TEXT PRIMARY KEY NOT NULL,
+  task_id TEXT NOT NULL,
+  channel TEXT DEFAULT 'sms',
+  recipient TEXT DEFAULT '',
+  body TEXT DEFAULT '',
+  sent_at INTEGER,
+  created_at INTEGER NOT NULL
+)`);
+
+_db.execSync(`CREATE TABLE IF NOT EXISTS voice_notes (
+  id TEXT PRIMARY KEY NOT NULL,
+  transcript TEXT DEFAULT '',
+  audio_uri TEXT DEFAULT '',
+  duration_ms INTEGER DEFAULT 0,
+  task_count INTEGER DEFAULT 0,
+  created_at INTEGER NOT NULL
+)`);
+
+_db.execSync(`CREATE TABLE IF NOT EXISTS category_streaks (
+  category TEXT PRIMARY KEY NOT NULL,
+  current INTEGER DEFAULT 0,
+  longest INTEGER DEFAULT 0,
+  last_completion_date TEXT DEFAULT ''
+)`);
+
 // ─── Migration version tracking ────────────────────────────────────────────
 _db.execSync(`CREATE TABLE IF NOT EXISTS schema_versions (
   version INTEGER PRIMARY KEY NOT NULL,
@@ -79,7 +135,7 @@ _db.execSync(`CREATE TABLE IF NOT EXISTS schema_versions (
 )`);
 
 // Record current schema version
-const currentVersion = 2;
+const currentVersion = 3;
 const versionRow = _db.getFirstSync<{ version: number } | null>(
   'SELECT version FROM schema_versions ORDER BY version DESC LIMIT 1'
 );

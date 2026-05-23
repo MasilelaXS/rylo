@@ -19,6 +19,10 @@ function rowToTask(row: Record<string, unknown>): Task {
     completedAt: (row.completed_at as number | null) ?? undefined,
     location: (row.location as string) ?? '',
     estimatedMinutes: (row.estimated_minutes as number) || 0,
+    committed: Boolean(row.committed),
+    category: ((row.category as string) || 'general') as Task['category'],
+    commStatus: (row.comm_status as Task['commStatus']) ?? undefined,
+    difficulty: ((row.difficulty as number) || undefined) as Task['difficulty'],
   };
 }
 
@@ -75,8 +79,8 @@ export async function getOverdueTasks(): Promise<Task[]> {
 export async function insertTask(task: Task): Promise<void> {
   const db = await getDatabase();
   await db.runAsync(
-    `INSERT INTO tasks (id, title, description, due_date, priority, status, escalation_level, project_id, repeat_type, voice_reminder_enabled, communication_target, snooze_count, created_at, location, estimated_minutes, completed_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO tasks (id, title, description, due_date, priority, status, escalation_level, project_id, repeat_type, voice_reminder_enabled, communication_target, snooze_count, created_at, location, estimated_minutes, completed_at, committed, category, comm_status, difficulty)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       task.id,
       task.title,
@@ -94,6 +98,10 @@ export async function insertTask(task: Task): Promise<void> {
       task.location ?? '',
       task.estimatedMinutes ?? 0,
       task.completedAt ?? null,
+      task.committed ? 1 : 0,
+      task.category ?? 'general',
+      task.commStatus ?? null,
+      task.difficulty ?? 0,
     ]
   );
 }
@@ -115,6 +123,10 @@ export async function updateTask(task: Partial<Task> & { id: string }): Promise<
   if (task.location !== undefined) { sets.push('location = ?'); values.push(task.location); }
   if (task.estimatedMinutes !== undefined) { sets.push('estimated_minutes = ?'); values.push(task.estimatedMinutes); }
   if (task.completedAt !== undefined) { sets.push('completed_at = ?'); values.push(task.completedAt ?? null); }
+  if (task.committed !== undefined) { sets.push('committed = ?'); values.push(task.committed ? 1 : 0); }
+  if (task.category !== undefined) { sets.push('category = ?'); values.push(task.category); }
+  if (task.commStatus !== undefined) { sets.push('comm_status = ?'); values.push(task.commStatus ?? null); }
+  if (task.difficulty !== undefined) { sets.push('difficulty = ?'); values.push(task.difficulty ?? 0); }
 
   if (sets.length === 0) return;
   values.push(task.id);

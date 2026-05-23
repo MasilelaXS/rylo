@@ -150,7 +150,7 @@ export default function GlobalSearch({ visible, onClose }: Props) {
           ) : results.length === 0 ? (
             <View style={s.empty}>
               <Ionicons name="sad-outline" size={42} color={COLORS.surfaceBorder} />
-              <Text style={s.emptyText}>No results for "{query}"</Text>
+              <Text style={s.emptyText}>No results for &quot;{query}&quot;</Text>
             </View>
           ) : (
             <FlatList

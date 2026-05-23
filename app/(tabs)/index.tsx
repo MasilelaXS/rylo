@@ -14,9 +14,11 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AddTaskModal from '../../src/components/AddTaskModal';
 import BackgroundImage from '../../src/components/BackgroundImage';
+import BriefingPlayer from '../../src/components/BriefingPlayer';
 import EmptyState from '../../src/components/EmptyState';
 import GlobalSearch from '../../src/components/GlobalSearch';
 import TaskCard from '../../src/components/TaskCard';
+import VoiceCaptureModal from '../../src/components/VoiceCaptureModal';
 import { scheduleDailyBriefings, scheduleHourlyReminders, scheduleTaskReminder } from '../../src/notifications/notificationService';
 import { useBackgroundStore } from '../../src/store/backgroundStore';
 import { useProjectStore } from '../../src/store/projectStore';
@@ -74,6 +76,7 @@ export default function DashboardScreen() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [editTask, setEditTask] = useState<Task | null>(null);
   const [showSearch, setShowSearch] = useState(false);
+  const [showVoice, setShowVoice] = useState(false);
   const { editTask: saveEditedTask, removeTask } = useTaskStore();
   const insets = useSafeAreaInsets();
   const fabBottom = Math.max(insets.bottom, 8) + 14 + 68 + 16;
@@ -199,6 +202,12 @@ export default function DashboardScreen() {
               </TouchableOpacity>
               <TouchableOpacity
                 style={s.iconBtn}
+                onPress={() => setShowVoice(true)}
+              >
+                <Ionicons name="mic-outline" size={21} color={COLORS.text} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={s.iconBtn}
                 onPress={() => settings.voiceEnabled && speakMorningBriefing(stats.total, stats.overdue)}
               >
                 <Ionicons name="notifications-outline" size={21} color={COLORS.text} />
@@ -228,6 +237,8 @@ export default function DashboardScreen() {
               </View>
             </View>
           )}
+
+          <BriefingPlayer />
 
           {/* ── Progress Hero ───────────────────────────────────────── */}
           <ImageBackground
@@ -364,7 +375,7 @@ export default function DashboardScreen() {
               <View style={[s.avoidanceBanner, CARD_SHADOW_SM]}>
                 <Ionicons name="warning-outline" size={16} color={COLORS.warning} />
                 <Text style={s.avoidanceBannerText}>
-                  These tasks keep getting ignored. Each day they stay unresolved, they'll escalate further.
+                  These tasks keep getting ignored. Each day they stay unresolved, they&apos;ll escalate further.
                 </Text>
               </View>
               {avoidanceTasks.slice(0, 3).map((t) => (
@@ -398,6 +409,7 @@ export default function DashboardScreen() {
           onDelete={handleDeleteTask}
         />
         <GlobalSearch visible={showSearch} onClose={() => setShowSearch(false)} />
+        <VoiceCaptureModal visible={showVoice} onClose={() => setShowVoice(false)} />
       </SafeAreaView>
     </BackgroundImage>
   );

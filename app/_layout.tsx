@@ -1,13 +1,16 @@
-import { Stack } from 'expo-router';
+import * as QuickActions from 'expo-quick-actions';
+import { Stack, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef } from 'react';
-import { AppState, AppStateStatus } from 'react-native';
+import { AppState, AppStateStatus, Linking } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 // Import database module so the sync open+schema runs before any screen mounts
 import ErrorBoundary from '../src/components/ErrorBoundary';
+import GlobalModalsHost from '../src/components/GlobalModalsHost';
 import '../src/database/database';
 import { registerNotificationCategories, scheduleDailyBriefings, setupNotificationResponseHandler } from '../src/notifications/notificationService';
+import { ingestSharedText, parseCaptureUrl, setupQuickActions } from '../src/services/captureService';
 import { useSettingsStore } from '../src/store/settingsStore';
 import { useTaskStore } from '../src/store/taskStore';
 import { speakHourlySummary } from '../src/voice/ttsService';
@@ -22,7 +25,37 @@ export default function RootLayout() {
     registerNotificationCategories().catch(console.error);
     // Handle tapping notification actions
     const unsubNotif = setupNotificationResponseHandler();
-    return unsubNotif;
+    // Home-screen quick-action shortcuts
+    setupQuickActions().catch(() => {});
+
+    // Deep-link / share-intent capture: pieter://capture?text=...
+    const handleUrl = async (url: string | null) => {
+      if (!url) return;
+      const text = parseCaptureUrl(url);
+      if (text) {
+        const task = await ingestSharedText(text);
+        if (task) {
+          useTaskStore.getState().loadAll().catch(() => {});
+          try { router.push('/(tabs)/tasks'); } catch { /* ignore navigation race */ }
+        }
+      }
+    };
+    Linking.getInitialURL().then(handleUrl).catch(() => {});
+    const sub = Linking.addEventListener('url', (e) => handleUrl(e.url));
+
+    // Quick action shortcut routing
+    const unsubQA = QuickActions.addListener((item) => {
+      const route = (item.params as { route?: string } | undefined)?.route;
+      if (route) {
+        try { router.push(route as never); } catch { /* ignore */ }
+      }
+    });
+
+    return () => {
+      unsubNotif();
+      sub.remove();
+      unsubQA.remove?.();
+    };
   }, []);
 
   useEffect(() => {
@@ -65,6 +98,7 @@ export default function RootLayout() {
           <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="(tabs)" />
           </Stack>
+          <GlobalModalsHost />
         </ErrorBoundary>
       </SafeAreaProvider>
     </GestureHandlerRootView>

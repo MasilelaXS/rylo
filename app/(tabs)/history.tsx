@@ -4,6 +4,8 @@ import { ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BackgroundImage from '../../src/components/BackgroundImage';
 import EmptyState from '../../src/components/EmptyState';
+import ProcrastinationHeatmap from '../../src/components/ProcrastinationHeatmap';
+import StreaksCard from '../../src/components/StreaksCard';
 import { useTaskStore } from '../../src/store/taskStore';
 import type { Task } from '../../src/types';
 import { ACCENT, CARD_SHADOW, CARD_SHADOW_SM, COLORS, PRIORITY_CONFIG } from '../../src/utils/constants';
@@ -265,6 +267,9 @@ export default function HistoryScreen() {
                   </View>
                 ))}
               </View>
+
+              <StreaksCard refreshKey={tasks.length} />
+              <ProcrastinationHeatmap tasks={tasks} />
 
               {/* Weekly completion bars */}
               <View style={[s.analyticsCard, CARD_SHADOW_SM]}>

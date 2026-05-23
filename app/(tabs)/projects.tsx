@@ -14,6 +14,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import AddTaskModal from '../../src/components/AddTaskModal';
 import BackgroundImage from '../../src/components/BackgroundImage';
 import EmptyState from '../../src/components/EmptyState';
+import NextActionBanner from '../../src/components/NextActionBanner';
+import ProjectBreakdownModal from '../../src/components/ProjectBreakdownModal';
 import ProjectCard from '../../src/components/ProjectCard';
 import TaskCard from '../../src/components/TaskCard';
 import { useProjectStore } from '../../src/store/projectStore';
@@ -28,6 +30,7 @@ export default function ProjectsScreen() {
   const { tasks, loadAll: loadTasks, markComplete, snoozeTask, editTask: saveEditedTask, removeTask } = useTaskStore();
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [showBreakdown, setShowBreakdown] = useState(false);
   const [showAddTaskModal, setShowAddTaskModal] = useState(false);
   const [editTask, setEditTask] = useState<Task | null>(null);
   const [newName, setNewName] = useState('');
@@ -96,11 +99,15 @@ export default function ProjectsScreen() {
               </TouchableOpacity>
               <View style={[s.colorDot, { backgroundColor: selectedProject.color }]} />
               <Text style={s.detailTitle}>{selectedProject.name}</Text>
+              <TouchableOpacity style={s.addTaskBtn} onPress={() => setShowBreakdown(true)}>
+                <Ionicons name="sparkles-outline" size={20} color={COLORS.primary} />
+              </TouchableOpacity>
               <TouchableOpacity style={s.addTaskBtn} onPress={() => setShowAddTaskModal(true)}>
                 <Ionicons name="add-circle-outline" size={22} color={COLORS.primary} />
               </TouchableOpacity>
             </View>
             {selectedProject.description ? <Text style={s.detailDesc}>{selectedProject.description}</Text> : null}
+            <NextActionBanner projectId={selectedProject.id} onOpen={setEditTask} onComplete={(t) => markComplete(t.id)} />
             {projectTasks.length === 0 ? (
               <EmptyState icon="checkmark-done-outline" title="No tasks yet" subtitle="Tap + to add a task" />
             ) : (
@@ -151,6 +158,11 @@ export default function ProjectsScreen() {
         {selectedProject && (
           <AddTaskModal visible={showAddTaskModal} onClose={() => setShowAddTaskModal(false)} onSave={handleAddTask} projects={projects} />
         )}
+        <ProjectBreakdownModal
+          visible={showBreakdown}
+          projectId={selectedProject?.id ?? null}
+          onClose={() => setShowBreakdown(false)}
+        />
         <AddTaskModal
           visible={!!editTask}
           onClose={() => setEditTask(null)}

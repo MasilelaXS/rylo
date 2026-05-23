@@ -23,6 +23,11 @@ export interface Task {
   completedAt?: number;   // unix ms, set when status→completed
   location?: string;
   estimatedMinutes?: number; // 0 = unset
+  // ─── Execution-Enforcement extensions ─────────────────
+  committed?: boolean;                 // commitment-contract task
+  category?: 'communication' | 'deep_work' | 'admin' | 'personal' | 'general';
+  commStatus?: 'pending' | 'attempted' | 'confirmed';
+  difficulty?: 1 | 2 | 3 | 4 | 5;
 }
 
 export interface Project {
@@ -124,4 +129,66 @@ export interface DailyStats {
   completed: number;
   overdue: number;
   pending: number;
+}
+
+// ─── Execution-Enforcement Types ──────────────────────────────────────────────
+export interface Excuse {
+  id: string;
+  taskId: string;
+  reason: string;
+  category: string; // free-form tag like "tired", "no time", "afraid", etc.
+  createdAt: number;
+}
+
+export interface Commitment {
+  id: string;
+  taskId: string;
+  contact: string;          // phone / email / name
+  accountabilityMessage: string;
+  triggered: boolean;       // 0|1 — has the accountability fired?
+  createdAt: number;
+}
+
+export interface FollowUp {
+  id: string;
+  sourceTaskId: string;     // task that was completed and spawned this chase
+  chaseTaskId: string;      // newly created chase task
+  expectedReplyAt: number;  // unix ms
+  createdAt: number;
+}
+
+export interface CommDraft {
+  id: string;
+  taskId: string;
+  channel: 'sms' | 'whatsapp' | 'email' | 'other';
+  recipient: string;
+  body: string;
+  sentAt?: number;
+  createdAt: number;
+}
+
+export interface VoiceNote {
+  id: string;
+  transcript: string;
+  audioUri?: string;
+  durationMs?: number;
+  taskCount: number;      // # tasks extracted
+  createdAt: number;
+}
+
+export type StreakCategory = 'communication' | 'deep_work' | 'admin' | 'personal' | 'general';
+
+export interface CategoryStreak {
+  category: StreakCategory;
+  current: number;
+  longest: number;
+  lastCompletionDate: string; // YYYY-MM-DD
+}
+
+// Extra task columns (added in this iteration)
+export interface TaskExt {
+  committed?: boolean;
+  category?: StreakCategory;
+  commStatus?: 'pending' | 'attempted' | 'confirmed';
+  difficulty?: 1 | 2 | 3 | 4 | 5;
 }
