@@ -20,7 +20,7 @@
     "@react-navigation/elements": "^2.6.3",
     "@react-navigation/native": "^7.1.8",
     "crypto-js": "^4.2.0",
-    "expo": "^55.0.0",
+    "expo": "~55.0.26",
     "expo-av": "^16.0.8",
     "expo-blur": "~55.0.14",
     "expo-clipboard": "~55.0.13",
@@ -32,12 +32,12 @@
     "expo-font": "~55.0.8",
     "expo-glass-effect": "~55.0.11",
     "expo-haptics": "~55.0.14",
-    "expo-image": "~55.0.10",
+    "expo-image": "~55.0.11",
     "expo-linear-gradient": "~55.0.14",
     "expo-linking": "~55.0.15",
     "expo-notifications": "~55.0.23",
     "expo-quick-actions": "^6.0.1",
-    "expo-router": "~55.0.15",
+    "expo-router": "~55.0.16",
     "expo-sharing": "~55.0.20",
     "expo-speech": "~55.0.14",
     "expo-splash-screen": "~55.0.21",
@@ -68,6 +68,13 @@
   },
   "engines": {
     "node": ">=22.13.0"
+  },
+  "expo": {
+    "doctor": {
+      "reactNativeDirectoryCheck": {
+        "exclude": ["expo-av"]
+      }
+    }
   },
   "private": true
 }
