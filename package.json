@@ -7,8 +7,8 @@
     "tunnel": "node scripts/tunnel.js",
     "lan": "expo start --lan",
     "reset-project": "node ./scripts/reset-project.js",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
     "web": "expo start --web",
     "lint": "expo lint",
     "ngrok-auth": "node -e \"console.log('Run: ./node_modules/.bin/ngrok authtoken YOUR_TOKEN_FROM_dashboard.ngrok.com')\""
