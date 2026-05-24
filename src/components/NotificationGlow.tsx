@@ -31,8 +31,10 @@ const BREATHE_MS   = 900;
 const FADE_IN_MS   = 380;
 const FADE_OUT_MS  = 700;
 const BLUR_SIGMA   = 50;   // softness of each blob
-const BAND_WIDTH   = 70;   // thickness of the edge ring (px)
-const CORNER_R     = 48;   // mask corner radius
+// The mask is a stroked rect centred on the screen edge — half the stroke is
+// clipped off-screen, half is visible inside. So visible band ≈ BAND_WIDTH/2.
+const BAND_WIDTH   = 160;  // total stroke width → ~80px visible band
+const CORNER_R     = 0;    // sharp corners so the band reaches every pixel
 
 // ─── Event bus ───────────────────────────────────────────────────────────────
 type Listener = () => void;
@@ -113,12 +115,10 @@ export default function NotificationGlow() {
 
   if (!visible) return null;
 
-  // The mask is a stroked rounded rect sitting on the screen edges. Only
-  // pixels inside this band are kept from the colored content below.
-  // Inset by half the stroke width so the stroke straddles the screen edge
-  // (half outside, half inside) — looks like the glow hugs the bezel.
-  const inset = BAND_WIDTH / 2;
-
+  // Position the mask path ON the screen edges (x=0, y=0, w=W, h=H). Because
+  // strokes are centred on the path, half the stroke spills outside the canvas
+  // (clipped) and half lies inside flush with the edge. Net result: the band
+  // starts exactly at pixel 0 and extends inward by BAND_WIDTH/2.
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
       <Canvas style={{ flex: 1 }}>
@@ -128,18 +128,15 @@ export default function NotificationGlow() {
             mask={
               <Group>
                 <RoundedRect
-                  x={inset}
-                  y={inset}
-                  width={W - inset * 2}
-                  height={H - inset * 2}
+                  x={0}
+                  y={0}
+                  width={W}
+                  height={H}
                   r={CORNER_R}
                   style="stroke"
                   strokeWidth={BAND_WIDTH}
                   color="white"
-                >
-                  {/* Soft mask edges → colors fade smoothly into the screen */}
-                  <BlurMask blur={18} style="normal" />
-                </RoundedRect>
+                />
               </Group>
             }
           >
