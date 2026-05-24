@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   ImageBackground,
@@ -40,8 +40,7 @@ function getGreeting(): string {
 
 // ─── Screen ──────────────────────────────────────────────────────────────────
 export default function DashboardScreen() {
-  const { todayTasks, overdueTasks, loadAll, addTask, markComplete, snoozeTask, getDailyStats, getWeeklyBars, getAvoidanceTasks, getEstimatedMinutesToday } =
-    useTaskStore();
+  const { tasks, todayTasks, overdueTasks, loadAll, addTask, markComplete, snoozeTask } = useTaskStore();
   const { projects, loadAll: loadProjects } = useProjectStore();
   const { settings, update: updateSettings } = useSettingsStore();
   const { backgrounds, fetchBackground } = useBackgroundStore();
@@ -64,10 +63,58 @@ export default function DashboardScreen() {
     fetchBackground('dashboard');
   }, []);
 
-  const stats = getDailyStats();
-  const weeklyBars = getWeeklyBars();
-  const avoidanceTasks = getAvoidanceTasks();
-  const estimatedMinutes = getEstimatedMinutesToday();
+  const stats = useMemo(() => {
+    const start = new Date(); start.setHours(0, 0, 0, 0);
+    const end   = new Date(); end.setHours(23, 59, 59, 999);
+    const startMs = start.getTime();
+    const endMs   = end.getTime();
+    const today = tasks.filter((t) => t.dueDate >= startMs && t.dueDate <= endMs);
+    return {
+      total: today.length,
+      completed: today.filter((t) => t.status === 'completed').length,
+      overdue: today.filter((t) => t.dueDate < Date.now() && t.status !== 'completed' && t.status !== 'cancelled').length,
+      pending: today.filter((t) => t.status === 'pending' || t.status === 'snoozed').length,
+    };
+  }, [tasks]);
+
+  const weeklyBars = useMemo(() => {
+    const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const today = new Date();
+    today.setHours(23, 59, 59, 999);
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(today);
+      d.setDate(today.getDate() - (6 - i));
+      const start = new Date(d); start.setHours(0, 0, 0, 0);
+      const end   = new Date(d); end.setHours(23, 59, 59, 999);
+      const dayTasks = tasks.filter((t) => t.dueDate >= start.getTime() && t.dueDate <= end.getTime());
+      return {
+        label: DAY_LABELS[d.getDay()],
+        total: dayTasks.length,
+        completed: dayTasks.filter((t) => t.status === 'completed').length,
+      };
+    });
+  }, [tasks]);
+
+  const avoidanceTasks = useMemo(() => {
+    const now = Date.now();
+    const twoDaysMs = 2 * 24 * 3600 * 1000;
+    return tasks
+      .filter((t) =>
+        t.status !== 'completed' &&
+        t.status !== 'cancelled' &&
+        (t.snoozeCount >= 3 || t.dueDate < now - twoDaysMs)
+      )
+      .sort((a, b) => b.snoozeCount - a.snoozeCount);
+  }, [tasks]);
+
+  const estimatedMinutes = useMemo(() => {
+    const start = new Date(); start.setHours(0, 0, 0, 0);
+    const end   = new Date(); end.setHours(23, 59, 59, 999);
+    return tasks
+      .filter((t) => t.dueDate >= start.getTime() && t.dueDate <= end.getTime() && t.status !== 'completed')
+      .reduce((acc, t) => acc + (t.estimatedMinutes ?? 0), 0);
+  }, [tasks]);
+
   const completionPct = stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0;
   const snoozedCount = todayTasks.filter((t) => t.status === 'snoozed').length;
   const streak = settings.currentStreak ?? 0;
