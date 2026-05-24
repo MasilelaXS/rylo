@@ -8,6 +8,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 // Import database module so the sync open+schema runs before any screen mounts
 import ErrorBoundary from '../src/components/ErrorBoundary';
 import GlobalModalsHost from '../src/components/GlobalModalsHost';
+import NotificationGlow, { triggerNotificationGlow } from '../src/components/NotificationGlow';
 import '../src/database/database';
 import { registerNotificationCategories, requestNotificationPermission, scheduleDailyBriefings, setupNotificationResponseHandler } from '../src/notifications/notificationService';
 import { ingestSharedText, parseCaptureUrl, setupQuickActions } from '../src/services/captureService';
@@ -30,6 +31,20 @@ export default function RootLayout() {
       .catch(console.error);
     // Handle tapping notification actions
     const unsubNotif = setupNotificationResponseHandler();
+
+    // Ambient glow when a notification arrives in the foreground, or when the
+    // user taps one (cold-launch / background → foreground).
+    let unsubRecv: (() => void) | undefined;
+    let unsubResp: (() => void) | undefined;
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const Notifications = require('expo-notifications') as typeof import('expo-notifications');
+      const recvSub = Notifications.addNotificationReceivedListener(() => triggerNotificationGlow());
+      const respSub = Notifications.addNotificationResponseReceivedListener(() => triggerNotificationGlow());
+      unsubRecv = () => recvSub.remove();
+      unsubResp = () => respSub.remove();
+    } catch { /* expo-notifications unavailable (e.g. Expo Go) */ }
+
     // Home-screen quick-action shortcuts
     setupQuickActions().catch(() => {});
 
@@ -60,6 +75,8 @@ export default function RootLayout() {
       unsubNotif();
       sub.remove();
       unsubQA.remove?.();
+      unsubRecv?.();
+      unsubResp?.();
     };
   }, []);
 
@@ -104,6 +121,7 @@ export default function RootLayout() {
             <Stack.Screen name="(tabs)" />
           </Stack>
           <GlobalModalsHost />
+          <NotificationGlow />
         </ErrorBoundary>
       </SafeAreaProvider>
     </GestureHandlerRootView>
