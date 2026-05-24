@@ -31,6 +31,7 @@ const defaults: AppSettings = {
   currentStreak: 0,
   longestStreak: 0,
   lastCompletionDate: '',
+  reliabilityAcknowledged: false,
 };
 
 export const useSettingsStore = create<SettingsStore>((set) => ({

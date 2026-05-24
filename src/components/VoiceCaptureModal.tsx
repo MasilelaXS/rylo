@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
 import { Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import type { ExtractedTask } from '../services/aiService';
-import { ensurePermission, saveTranscript, startRecording, stopRecording } from '../services/voiceCaptureService';
+import { ensurePermission, isTranscriptionAvailable, saveTranscript, startRecording, stopRecording, transcribeAudio } from '../services/voiceCaptureService';
 import { useTaskStore } from '../store/taskStore';
 import { CARD_SHADOW, COLORS } from '../utils/constants';
 
@@ -15,11 +15,12 @@ export interface VoiceCaptureModalProps {
 }
 
 export default function VoiceCaptureModal({ visible, onClose }: VoiceCaptureModalProps) {
-  const [phase, setPhase] = useState<'idle' | 'recording' | 'review' | 'saving' | 'done'>('idle');
+  const [phase, setPhase] = useState<'idle' | 'recording' | 'transcribing' | 'review' | 'saving' | 'done'>('idle');
   const [transcript, setTranscript] = useState('');
   const [audioUri, setAudioUri] = useState<string | null>(null);
   const [durationMs, setDurationMs] = useState(0);
   const [extracted, setExtracted] = useState<ExtractedTask[]>([]);
+  const [transcribeError, setTranscribeError] = useState<string | null>(null);
   const reload = useTaskStore((s) => s.loadAll);
 
   useEffect(() => {
@@ -29,6 +30,7 @@ export default function VoiceCaptureModal({ visible, onClose }: VoiceCaptureModa
       setAudioUri(null);
       setDurationMs(0);
       setExtracted([]);
+      setTranscribeError(null);
     }
   }, [visible]);
 
@@ -43,7 +45,22 @@ export default function VoiceCaptureModal({ visible, onClose }: VoiceCaptureModa
     const { uri, durationMs } = await stopRecording();
     setAudioUri(uri);
     setDurationMs(durationMs);
-    setPhase('review');
+    if (uri && isTranscriptionAvailable()) {
+      setPhase('transcribing');
+      setTranscribeError(null);
+      try {
+        const text = await transcribeAudio(uri);
+        setTranscript(text);
+      } catch (e: any) {
+        setTranscribeError(e?.message ?? 'Transcription failed');
+      }
+      setPhase('review');
+    } else {
+      if (!isTranscriptionAvailable()) {
+        setTranscribeError('Add EXPO_PUBLIC_GROQ_API_KEY in your .env to auto-transcribe.');
+      }
+      setPhase('review');
+    }
   };
 
   const handleSave = async () => {
@@ -86,10 +103,19 @@ export default function VoiceCaptureModal({ visible, onClose }: VoiceCaptureModa
             </View>
           )}
 
+          {phase === 'transcribing' && (
+            <View style={s.center}>
+              <View style={[s.pulse, { backgroundColor: COLORS.primaryLight, borderColor: COLORS.primary }]} />
+              <Text style={s.sub}>Transcribing…</Text>
+            </View>
+          )}
+
           {phase === 'review' && (
             <View>
               <Text style={s.label}>Transcript</Text>
-              <Text style={s.sub}>On-device transcription isn&apos;t available in this build — type or paste what you said. We&apos;ll still pull tasks from it.</Text>
+              {transcribeError && (
+                <Text style={[s.sub, { color: COLORS.danger, marginBottom: 6 }]}>{transcribeError}</Text>
+              )}
               <TextInput
                 style={[s.input, { minHeight: 140 }]}
                 value={transcript}

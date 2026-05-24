@@ -131,6 +131,75 @@ export async function cancelAllNotifications(): Promise<void> {
   await Notifications.cancelAllScheduledNotificationsAsync();
 }
 
+// ─── Diagnostic: fire a test notification in N seconds ───────────────────────
+// Returns a human-readable status string so the UI can show what actually
+// happened (permission denied, channel missing, scheduled OK, etc).
+export async function sendTestNotification(delaySec: number = 5): Promise<string> {
+  if (IS_EXPO_GO) return 'Not supported in Expo Go — install the built APK.';
+
+  const Notifications = N();
+
+  // 1. Permission check
+  const perm = await Notifications.getPermissionsAsync();
+  if (perm.status !== 'granted') {
+    const req = await Notifications.requestPermissionsAsync();
+    if (req.status !== 'granted') {
+      return 'Permission denied. Open Android Settings → Apps → Pieter → Notifications and allow them.';
+    }
+  }
+
+  // 2. Ensure the channel exists (no-op on iOS)
+  if (Platform.OS === 'android') {
+    await Notifications.setNotificationChannelAsync('reminders', {
+      name: 'Task Reminders',
+      importance: Notifications.AndroidImportance.MAX,
+      vibrationPattern: [0, 250, 250, 250],
+      lightColor: '#1E90FF',
+      sound: 'default',
+    });
+  }
+
+  // 3. Schedule
+  const trigger = new Date(Date.now() + Math.max(1, delaySec) * 1000);
+  try {
+    const id = await Notifications.scheduleNotificationAsync({
+      content: {
+        title: '🔔 Test notification',
+        body: `If you see this, notifications are working. (${delaySec}s test)`,
+        data: { type: 'test' },
+        sound: 'default',
+        ...(Platform.OS === 'android' && { channelId: 'reminders' }),
+      },
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.DATE,
+        date: trigger,
+      },
+    });
+    return `Scheduled (id ${id.slice(0, 6)}…). Lock the screen and wait ${delaySec}s. If nothing fires, the OS is killing background work — open Battery optimisation and whitelist Pieter.`;
+  } catch (err: unknown) {
+    return `Schedule failed: ${err instanceof Error ? err.message : String(err)}`;
+  }
+}
+
+// ─── Diagnostic: how many notifications are queued + permission status ───────
+export async function getNotificationStatus(): Promise<{
+  permission: string;
+  scheduledCount: number;
+  channelImportance?: number;
+}> {
+  if (IS_EXPO_GO) return { permission: 'expo-go', scheduledCount: 0 };
+  const Notifications = N();
+  const perm = await Notifications.getPermissionsAsync();
+  const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+  let channelImportance: number | undefined;
+  if (Platform.OS === 'android') {
+    const ch = await Notifications.getNotificationChannelAsync('reminders');
+    channelImportance = ch?.importance;
+  }
+  return { permission: perm.status, scheduledCount: scheduled.length, channelImportance };
+}
+
+
 // ─── Schedule morning & evening daily briefing notifications ─────────────────
 export async function scheduleDailyBriefings(tasks: Task[]): Promise<void> {
   if (IS_EXPO_GO) return;

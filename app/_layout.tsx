@@ -9,7 +9,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import ErrorBoundary from '../src/components/ErrorBoundary';
 import GlobalModalsHost from '../src/components/GlobalModalsHost';
 import '../src/database/database';
-import { registerNotificationCategories, scheduleDailyBriefings, setupNotificationResponseHandler } from '../src/notifications/notificationService';
+import { registerNotificationCategories, requestNotificationPermission, scheduleDailyBriefings, setupNotificationResponseHandler } from '../src/notifications/notificationService';
 import { ingestSharedText, parseCaptureUrl, setupQuickActions } from '../src/services/captureService';
 import { useSettingsStore } from '../src/store/settingsStore';
 import { useTaskStore } from '../src/store/taskStore';
@@ -21,8 +21,13 @@ export default function RootLayout() {
   useEffect(() => {
     // Load persisted settings before any screen renders
     useSettingsStore.getState().loadSettings().catch(console.error);
-    // Register notification action categories (Complete / Snooze)
-    registerNotificationCategories().catch(console.error);
+    // Ask for POST_NOTIFICATIONS (Android 13+) / iOS alert permission. Without this,
+    // nothing scheduled by expo-notifications ever fires in the background.
+    requestNotificationPermission()
+      .then((granted) => {
+        if (granted) registerNotificationCategories().catch(console.error);
+      })
+      .catch(console.error);
     // Handle tapping notification actions
     const unsubNotif = setupNotificationResponseHandler();
     // Home-screen quick-action shortcuts

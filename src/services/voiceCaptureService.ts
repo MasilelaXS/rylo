@@ -1,7 +1,5 @@
-// Voice capture service — records audio and (best-effort) transcribes it.
-// On-device STT is not in Expo SDK 55; we record audio via expo-av and store
-// the clip. If a transcription provider key is present we send it for ASR;
-// otherwise we save the recording and let the user type a transcript.
+// Voice capture service — records audio and transcribes it via Groq Whisper.
+// Falls back to manual entry if no GROQ key is configured or the call fails.
 
 import { Audio } from 'expo-av';
 import { insertTask } from '../database/tasks';
@@ -9,6 +7,35 @@ import { insertVoiceNote } from '../database/voiceNotes';
 import type { Task, VoiceNote } from '../types';
 import { generateId } from '../utils/constants';
 import { extractTasksFromNote, type ExtractedTask } from './aiService';
+
+const GROQ_AUDIO_URL = 'https://api.groq.com/openai/v1/audio/transcriptions';
+const GROQ_KEY = process.env.EXPO_PUBLIC_GROQ_API_KEY ?? '';
+
+export function isTranscriptionAvailable(): boolean {
+  return GROQ_KEY.length > 0;
+}
+
+export async function transcribeAudio(uri: string): Promise<string> {
+  if (!GROQ_KEY) throw new Error('GROQ_KEY_MISSING');
+  const form = new FormData();
+  // React Native's FormData accepts { uri, name, type } file shape
+  form.append('file', { uri, name: 'recording.m4a', type: 'audio/m4a' } as unknown as Blob);
+  form.append('model', 'whisper-large-v3-turbo');
+  form.append('response_format', 'text');
+  form.append('temperature', '0');
+
+  const res = await fetch(GROQ_AUDIO_URL, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${GROQ_KEY}` },
+    body: form,
+  });
+  if (!res.ok) {
+    const detail = await res.text().catch(() => '');
+    throw new Error(`Groq transcription failed ${res.status}: ${detail}`);
+  }
+  // response_format=text returns plain text body
+  return (await res.text()).trim();
+}
 
 let _recording: Audio.Recording | null = null;
 let _startedAt = 0;

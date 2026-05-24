@@ -22,20 +22,35 @@
         "android.permission.USE_EXACT_ALARM",
         "android.permission.RECEIVE_BOOT_COMPLETED",
         "android.permission.VIBRATE",
-        "android.permission.WAKE_LOCK"
+        "android.permission.WAKE_LOCK",
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"
       ],
       "predictiveBackGestureEnabled": false,
       "package": "com.danneldev.Pieter",
       "intentFilters": [
         {
           "action": "VIEW",
-          "category": ["DEFAULT", "BROWSABLE"],
-          "data": [{ "scheme": "pieter" }]
+          "category": [
+            "DEFAULT",
+            "BROWSABLE"
+          ],
+          "data": [
+            {
+              "scheme": "pieter"
+            }
+          ]
         },
         {
           "action": "SEND",
-          "category": ["DEFAULT"],
-          "data": [{ "mimeType": "text/plain" }]
+          "category": [
+            "DEFAULT"
+          ],
+          "data": [
+            {
+              "mimeType": "text/plain"
+            }
+          ]
         }
       ]
     },
@@ -68,7 +83,8 @@
       ],
       "expo-sqlite",
       "expo-sharing",
-      "expo-quick-actions"
+      "expo-quick-actions",
+      "expo-image"
     ],
     "experiments": {
       "typedRoutes": true,

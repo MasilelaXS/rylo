@@ -121,6 +121,7 @@ export interface AppSettings {
   currentStreak: number;   // consecutive days with ≥1 completion
   longestStreak: number;
   lastCompletionDate: string; // ISO date string YYYY-MM-DD
+  reliabilityAcknowledged: boolean; // user opened battery/exact-alarm settings
 }
 
 // ─── UI Helper Types ──────────────────────────────────────────────────────────

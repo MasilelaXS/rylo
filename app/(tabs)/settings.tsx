@@ -1,11 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Speech from 'expo-speech';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, Share, StatusBar, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Platform, ScrollView, Share, StatusBar, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BackgroundImage from '../../src/components/BackgroundImage';
 import BackupSection from '../../src/components/BackupSection';
-import { cancelAllNotifications, scheduleHourlyReminders } from '../../src/notifications/notificationService';
+import { cancelAllNotifications, getNotificationStatus, requestNotificationPermission, scheduleHourlyReminders, sendTestNotification } from '../../src/notifications/notificationService';
+import { openExactAlarmSettings, requestIgnoreBatteryOptimizations } from '../../src/services/reliabilityService';
 import { useNoteStore } from '../../src/store/noteStore';
 import { useProjectStore } from '../../src/store/projectStore';
 import { useSettingsStore } from '../../src/store/settingsStore';
@@ -171,6 +172,85 @@ export default function SettingsScreen() {
               }
             />
           </View>
+
+          {/* ── Reliability (Android only) ────────────────────────── */}
+          {Platform.OS === 'android' && (
+            <>
+              <Text style={s.sectionLabel}>Reliability</Text>
+              <View style={s.group}>
+                <SettingRow
+                  label="Notification permission"
+                  sublabel="Required on Android 13+ to post any notification."
+                  right={
+                    <TouchableOpacity
+                      style={s.reliBtn}
+                      onPress={() => {
+                        requestNotificationPermission().then((ok) => {
+                          if (!ok) Alert.alert('Permission denied', 'Open Android Settings → Apps → Pieter → Notifications and allow them.');
+                        });
+                      }}
+                    >
+                      <Text style={s.reliBtnText}>Request</Text>
+                    </TouchableOpacity>
+                  }
+                />
+                <Divider />
+                <SettingRow
+                  label="Battery optimisation"
+                  sublabel="Allow the app to run in the background so scheduled reminders fire when the phone is idle."
+                  right={
+                    <TouchableOpacity style={s.reliBtn} onPress={() => requestIgnoreBatteryOptimizations()}>
+                      <Text style={s.reliBtnText}>Open</Text>
+                    </TouchableOpacity>
+                  }
+                />
+                <Divider />
+                <SettingRow
+                  label="Alarms & reminders"
+                  sublabel="Android 12+: enable exact-time alarms so reminders fire on the minute."
+                  right={
+                    <TouchableOpacity style={s.reliBtn} onPress={() => openExactAlarmSettings()}>
+                      <Text style={s.reliBtnText}>Open</Text>
+                    </TouchableOpacity>
+                  }
+                />
+                <Divider />
+                <SettingRow
+                  label="Send test notification"
+                  sublabel="Fires in 5 seconds. Lock the phone after tapping to verify background delivery."
+                  right={
+                    <TouchableOpacity
+                      style={s.reliBtn}
+                      onPress={async () => {
+                        const msg = await sendTestNotification(5);
+                        const status = await getNotificationStatus();
+                        Alert.alert(
+                          'Test notification',
+                          `${msg}\n\nPermission: ${status.permission}\nQueued: ${status.scheduledCount}` +
+                            (status.channelImportance !== undefined ? `\nChannel importance: ${status.channelImportance}` : '')
+                        );
+                      }}
+                    >
+                      <Text style={s.reliBtnText}>Test</Text>
+                    </TouchableOpacity>
+                  }
+                />
+                <Divider />
+                <SettingRow
+                  label="Mark as done"
+                  sublabel={settings.reliabilityAcknowledged ? 'Banner dismissed.' : 'Hide the reminder banner on the dashboard.'}
+                  right={
+                    <Switch
+                      value={settings.reliabilityAcknowledged}
+                      onValueChange={(v) => update({ reliabilityAcknowledged: v })}
+                      trackColor={{ false: COLORS.cardAlt, true: COLORS.primaryLight }}
+                      thumbColor={settings.reliabilityAcknowledged ? COLORS.primary : COLORS.textMuted}
+                    />
+                  }
+                />
+              </View>
+            </>
+          )}
 
           {/* ── Hourly Reminders ──────────────────────────────────── */}
           <Text style={s.sectionLabel}>Hourly Reminders</Text>
@@ -388,6 +468,12 @@ const s = StyleSheet.create({
   title:    { fontSize: 28, fontWeight: '800', color: COLORS.text, letterSpacing: -0.5, marginBottom: 2 },
   subtitle: { fontSize: 14, color: COLORS.textSub, marginBottom: 24 },
   sectionLabel: { fontSize: 12, fontWeight: '700', color: COLORS.textSub, letterSpacing: 1.0, textTransform: 'uppercase', marginBottom: 8, marginTop: 4 },
+  reliBtn: {
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 14, paddingVertical: 8,
+    borderRadius: 10,
+  },
+  reliBtnText: { color: '#fff', fontSize: 12, fontWeight: '700' },
   nameInput: {
     fontSize: 14,
     color: COLORS.text,

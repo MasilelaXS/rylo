@@ -3,13 +3,15 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
-    ImageBackground,
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  ImageBackground,
+  Platform,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AddTaskModal from '../../src/components/AddTaskModal';
@@ -20,12 +22,13 @@ import GlobalSearch from '../../src/components/GlobalSearch';
 import TaskCard from '../../src/components/TaskCard';
 import VoiceCaptureModal from '../../src/components/VoiceCaptureModal';
 import { scheduleDailyBriefings, scheduleHourlyReminders, scheduleTaskReminder } from '../../src/notifications/notificationService';
+import { openExactAlarmSettings, requestIgnoreBatteryOptimizations } from '../../src/services/reliabilityService';
 import { useBackgroundStore } from '../../src/store/backgroundStore';
 import { useProjectStore } from '../../src/store/projectStore';
 import { useSettingsStore } from '../../src/store/settingsStore';
 import { useTaskStore } from '../../src/store/taskStore';
 import type { Task } from '../../src/types';
-import { ACCENT, CARD_SHADOW, CARD_SHADOW_SM, COLORS, generateId } from '../../src/utils/constants';
+import { CARD_SHADOW, CARD_SHADOW_SM, COLORS, generateId } from '../../src/utils/constants';
 import { speakMorningBriefing } from '../../src/voice/ttsService';
 
 function getGreeting(): string {
@@ -35,43 +38,12 @@ function getGreeting(): string {
   return 'Good evening';
 }
 
-// ─── Category card ────────────────────────────────────────────────────────────
-type AccentKey = { bg: string; color: string; border: string; text: string };
-
-function CategoryCard({
-  icon, title, subtitle, accent, onPress,
-}: {
-  icon: keyof typeof Ionicons.glyphMap;
-  title: string;
-  subtitle: string;
-  accent: AccentKey;
-  onPress: () => void;
-}) {
-  return (
-    <TouchableOpacity
-      onPress={onPress}
-      activeOpacity={0.78}
-      style={[s.catCard, { backgroundColor: accent.bg, borderColor: accent.border }]}
-    >
-      <View style={[s.catIcon, { backgroundColor: accent.color + '28' }]}>
-        <Ionicons name={icon} size={20} color={accent.color} />
-      </View>
-      <Text style={s.catTitle}>{title}</Text>
-      <Text style={s.catSub}>{subtitle}</Text>
-      <View style={s.catFooter}>
-        <Text style={[s.catCta, { color: accent.color }]}>View</Text>
-        <Ionicons name="arrow-forward-outline" size={12} color={accent.color} />
-      </View>
-    </TouchableOpacity>
-  );
-}
-
 // ─── Screen ──────────────────────────────────────────────────────────────────
 export default function DashboardScreen() {
   const { todayTasks, overdueTasks, loadAll, addTask, markComplete, snoozeTask, getDailyStats, getWeeklyBars, getAvoidanceTasks, getEstimatedMinutesToday } =
     useTaskStore();
   const { projects, loadAll: loadProjects } = useProjectStore();
-  const { settings } = useSettingsStore();
+  const { settings, update: updateSettings } = useSettingsStore();
   const { backgrounds, fetchBackground } = useBackgroundStore();
   const [showAddModal, setShowAddModal] = useState(false);
   const [editTask, setEditTask] = useState<Task | null>(null);
@@ -141,43 +113,22 @@ export default function DashboardScreen() {
   const progressColor =
     completionPct >= 80 ? COLORS.success : completionPct >= 40 ? COLORS.primary : COLORS.primary;
 
-  const CATEGORIES = [
-    {
-      icon: 'folder-open-outline' as keyof typeof Ionicons.glyphMap,
-      title: 'Projects',
-      subtitle: `${projects.length} active`,
-      accent: ACCENT.peach,
-      onPress: () => router.push('/(tabs)/projects'),
-    },
-    {
-      icon: 'calendar-outline' as keyof typeof Ionicons.glyphMap,
-      title: 'Calendar',
-      subtitle: 'Your record',
-      accent: ACCENT.purple,
-      onPress: () => router.push('/(tabs)/calendar'),
-    },
-    {
-      icon: 'mic-outline' as keyof typeof Ionicons.glyphMap,
-      title: 'Assistant',
-      subtitle: 'Voice control',
-      accent: ACCENT.pink,
-      onPress: () => router.push('/(tabs)/assistant'),
-    },
-    {
-      icon: 'alert-circle-outline' as keyof typeof Ionicons.glyphMap,
-      title: 'Overdue',
-      subtitle: `${overdueTasks.length} task${overdueTasks.length !== 1 ? 's' : ''}`,
-      accent: ACCENT.coral,
-      onPress: () => {},
-    },
-    {
-      icon: 'chatbubbles-outline' as keyof typeof Ionicons.glyphMap,
-      title: 'Communication',
-      subtitle: 'Logs & follow-ups',
-      accent: ACCENT.blue,
-      onPress: () => router.push('/(tabs)/communication'),
-    },
-  ];
+  const showReliabilityBanner =
+    Platform.OS === 'android' && !settings.reliabilityAcknowledged;
+
+  const handleFixReliability = () => {
+    Alert.alert(
+      'Keep reminders firing',
+      'Android may silently kill scheduled reminders unless the app is whitelisted.\n\nTap each button below in turn:\n\n1. "Battery" — choose "Don\'t optimise" / "Unrestricted".\n2. "Alarms & reminders" — toggle ON.\n\nWhen done, come back and tap "I\'ve done this".',
+      [
+        { text: 'Open Battery settings', onPress: () => { requestIgnoreBatteryOptimizations(); } },
+        { text: 'Open Alarms & reminders', onPress: () => { openExactAlarmSettings(); } },
+        { text: "I've done this", onPress: () => updateSettings({ reliabilityAcknowledged: true }) },
+        { text: 'Later', style: 'cancel' },
+      ],
+      { cancelable: true }
+    );
+  };
 
   return (
     <BackgroundImage screen="dashboard">
@@ -188,7 +139,7 @@ export default function DashboardScreen() {
           {/* ── Header ─────────────────────────────────────────────── */}
           <View style={s.header}>
             <View>
-              <Text style={s.greeting}>{getGreeting()} 👋</Text>
+              <Text style={s.greeting}>{getGreeting()}</Text>
               <Text style={s.date}>
                 {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
               </Text>
@@ -220,16 +171,29 @@ export default function DashboardScreen() {
               </TouchableOpacity>
             </View>
           </View>
-
+          {/* ── Reliability banner (Android only, one-time) ─────── */}
+          {showReliabilityBanner && (
+            <TouchableOpacity
+              style={[s.reliabilityBanner, CARD_SHADOW_SM]}
+              activeOpacity={0.85}
+              onPress={handleFixReliability}
+            >
+              <Ionicons name="warning-outline" size={20} color={COLORS.warning} />
+              <View style={{ flex: 1 }}>
+                <Text style={s.reliabilityTitle}>Reminders may not fire in the background</Text>
+                <Text style={s.reliabilitySub}>Tap to whitelist the app from battery optimisation and enable exact alarms.</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={COLORS.textMuted} />
+            </TouchableOpacity>
+          )}
           {/* ── Streak Banner ───────────────────────────────────────── */}
           {streak > 0 && (
             <View style={[s.streakBanner, CARD_SHADOW_SM]}>
-              <Text style={s.streakEmoji}>{streak >= 7 ? '🔥' : streak >= 3 ? '⚡' : '✨'}</Text>
               <View style={{ flex: 1 }}>
                 <Text style={s.streakTitle}>{streak}-day streak</Text>
                 <Text style={s.streakSub}>
                   {streak >= 7 ? 'On fire! Keep it up!' : streak >= 3 ? 'Building momentum!' : 'Great start!'}
-                  {settings.longestStreak > streak ? `  Best: ${settings.longestStreak}` : ' 🏆 Personal best!'}
+                  {settings.longestStreak > streak ? `  Best: ${settings.longestStreak}` : '  Personal best!'}
                 </Text>
               </View>
               <View style={s.streakBadge}>
@@ -320,11 +284,6 @@ export default function DashboardScreen() {
             </View>
           </View>
 
-          {/* ── Quick Access grid ───────────────────────────────────── */}
-          <Text style={s.sectionHeader}>Quick Access</Text>
-          <View style={s.catGrid}>
-            {CATEGORIES.map((cat) => <CategoryCard key={cat.title} {...cat} />)}
-          </View>
 
           {/* ── Today's Tasks ───────────────────────────────────────── */}
           <View style={s.sectionRow}>
@@ -456,15 +415,7 @@ const s = StyleSheet.create({
   chipValue: { fontSize: 20, fontWeight: '800', lineHeight: 22 },
   chipLabel: { fontSize: 10, color: COLORS.textMuted, marginTop: 3, letterSpacing: 0.3 },
 
-  // ── Category grid
   sectionHeader: { fontSize: 16, fontWeight: '700', color: COLORS.text, marginBottom: 12 },
-  catGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 24 },
-  catCard: { width: '47%', borderRadius: 18, padding: 16, borderWidth: 1 },
-  catIcon: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
-  catTitle: { color: COLORS.text, fontSize: 14, fontWeight: '700', marginBottom: 3 },
-  catSub:   { color: COLORS.textSub, fontSize: 12, lineHeight: 16, marginBottom: 14 },
-  catFooter: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  catCta:    { fontSize: 12, fontWeight: '700' },
 
   // ── Section row
   sectionRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
@@ -477,6 +428,14 @@ const s = StyleSheet.create({
     backgroundColor: COLORS.card, borderRadius: 16,
     padding: 14, marginBottom: 14,
   },
+  reliabilityBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    backgroundColor: COLORS.warningLight, borderRadius: 14,
+    padding: 12, marginBottom: 12,
+    borderWidth: 1, borderColor: COLORS.warning + '55',
+  },
+  reliabilityTitle: { fontSize: 13, fontWeight: '700', color: COLORS.text },
+  reliabilitySub:   { fontSize: 11, color: COLORS.textSub, marginTop: 2 },
   streakEmoji: { fontSize: 28 },
   streakTitle: { fontSize: 15, fontWeight: '700', color: COLORS.text },
   streakSub:   { fontSize: 12, color: COLORS.textSub, marginTop: 1 },
