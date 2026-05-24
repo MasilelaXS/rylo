@@ -12,8 +12,8 @@ import {
   SweepGradient,
   vec,
 } from '@shopify/react-native-skia';
-import React, { useEffect, useRef, useState } from 'react';
-import { Dimensions, StyleSheet, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { LayoutChangeEvent, StyleSheet, View } from 'react-native';
 import {
   Easing,
   cancelAnimation,
@@ -56,14 +56,13 @@ export function triggerNotificationGlow(): void {
 // ─── Component ───────────────────────────────────────────────────────────────
 export default function NotificationGlow() {
   const [visible, setVisible] = useState(false);
-  const sizeRef = useRef(Dimensions.get('window'));
+  const [size, setSize] = useState({ w: 0, h: 0 });
 
   const fade    = useSharedValue(0); // 0..1 master visibility
   const breathe = useSharedValue(1); // ~0.9..1.1 breathing multiplier
 
   useEffect(() => {
     const onTrigger = () => {
-      sizeRef.current = Dimensions.get('window');
       setVisible(true);
 
       fade.value = 0;
@@ -99,13 +98,28 @@ export default function NotificationGlow() {
 
   const groupOpacity = useDerivedValue(() => fade.value * breathe.value);
 
-  if (!visible) return null;
+  const onLayout = (e: LayoutChangeEvent) => {
+    const { width, height } = e.nativeEvent.layout;
+    if (width !== size.w || height !== size.h) setSize({ w: width, h: height });
+  };
 
-  const { width: W, height: H } = sizeRef.current;
+  if (!visible || size.w === 0 || size.h === 0) {
+    // Still mount the View so onLayout fires before the next trigger.
+    return (
+      <View
+        pointerEvents="none"
+        style={StyleSheet.absoluteFill}
+        onLayout={onLayout}
+      />
+    );
+  }
+
+  const W = size.w;
+  const H = size.h;
   const center = vec(W / 2, H / 2);
 
   return (
-    <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+    <View pointerEvents="none" style={StyleSheet.absoluteFill} onLayout={onLayout}>
       <Canvas style={{ flex: 1 }}>
         <Group opacity={groupOpacity}>
           {/* Outer bloom — wider, softer, lower alpha */}
