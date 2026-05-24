@@ -1,146 +1,166 @@
-// Full-screen ambient glow overlay that pulses when a notification arrives.
-// Triggered by `triggerNotificationGlow()` — registered listeners in
-// _layout.tsx call this from expo-notifications received/response events.
+// Google-Assistant-style edge glow rendered with Skia. A blurred, stroked
+// rounded rectangle is inset just outside the screen edges so the stroke
+// sits exactly on the border. A four-color sweep gradient rotates around it
+// (the same blue/red/yellow/green ring Assistant uses), and the whole layer
+// fades in, pulses, and fades out on every trigger.
 
-import { LinearGradient } from 'expo-linear-gradient';
+import {
+  Canvas,
+  Group,
+  RoundedRect,
+  SweepGradient,
+  vec,
+} from '@shopify/react-native-skia';
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, Dimensions, Easing, StyleSheet, View } from 'react-native';
+import { Dimensions, StyleSheet, View } from 'react-native';
+import Animated, {
+  Easing,
+  cancelAnimation,
+  useAnimatedStyle,
+  useDerivedValue,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withTiming,
+} from 'react-native-reanimated';
 
-// ─── Palettes ────────────────────────────────────────────────────────────────
-// Each palette is 4 colors → 4 orbs (top-left, top-right, bottom-left, bottom-right)
-const PALETTES: readonly (readonly [string, string, string, string])[] = [
-  ['#FF6CAB', '#7366FF', '#00D4FF', '#FFC371'], // sunset aurora
-  ['#00F5A0', '#00D9F5', '#7B61FF', '#FF61D2'], // neon dream
-  ['#FFD86F', '#FC6262', '#A06EFF', '#5B8DEF'], // warm electric
-  ['#56CCF2', '#2F80ED', '#9B51E0', '#EB5757'], // ocean fire
-  ['#1DE9B6', '#00B0FF', '#FFAB40', '#FF4081'], // tropical
-  ['#A8FF78', '#78FFD6', '#56CCF2', '#BB6BD9'], // mint dream
-];
+// ─── Constants ───────────────────────────────────────────────────────────────
+const G_BLUE   = '#4285F4';
+const G_RED    = '#EA4335';
+const G_YELLOW = '#FBBC04';
+const G_GREEN  = '#34A853';
+const COLORS   = [G_BLUE, G_RED, G_YELLOW, G_GREEN, G_BLUE]; // last repeats for seamless wrap
 
-const pickPalette = () => PALETTES[Math.floor(Math.random() * PALETTES.length)];
+const STROKE_WIDTH  = 38;   // thickness of the colored ring
+const BLUR_RADIUS   = 26;   // softness — bigger = more bloom
+const CORNER_RADIUS = 60;   // rounded corners on the glow ring
 
-// ─── Event bus (module-level listener registry) ──────────────────────────────
+const TOTAL_MS = 4200;
+
+// ─── Event bus ───────────────────────────────────────────────────────────────
 type Listener = () => void;
 const listeners = new Set<Listener>();
 
 export function triggerNotificationGlow(): void {
-  listeners.forEach((l) => {
-    try { l(); } catch { /* ignore */ }
-  });
+  listeners.forEach((l) => { try { l(); } catch { /* ignore */ } });
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
 export default function NotificationGlow() {
-  const [palette, setPalette] = useState<readonly [string, string, string, string]>(() => pickPalette());
   const [visible, setVisible] = useState(false);
+  const sizeRef = useRef(Dimensions.get('window'));
 
-  const opacity = useRef(new Animated.Value(0)).current;
-  const pulse   = useRef(new Animated.Value(0.85)).current;
+  const opacity  = useSharedValue(0);
+  const scale    = useSharedValue(0.96);
+  const rotation = useSharedValue(0); // 0..1 → mapped to 0..2π for the sweep
 
   useEffect(() => {
     const onTrigger = () => {
-      setPalette(pickPalette());
+      sizeRef.current = Dimensions.get('window');
       setVisible(true);
 
-      opacity.setValue(0);
-      pulse.setValue(0.85);
+      // Reset
+      opacity.value = 0;
+      scale.value = 0.96;
+      rotation.value = 0;
 
-      Animated.sequence([
-        // Fade in
-        Animated.timing(opacity, {
-          toValue: 1,
-          duration: 400,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
-        }),
-        // Three breathing pulses
-        Animated.loop(
-          Animated.sequence([
-            Animated.timing(pulse, {
-              toValue: 1.12,
-              duration: 900,
-              easing: Easing.inOut(Easing.sin),
-              useNativeDriver: true,
-            }),
-            Animated.timing(pulse, {
-              toValue: 0.85,
-              duration: 900,
-              easing: Easing.inOut(Easing.sin),
-              useNativeDriver: true,
-            }),
-          ]),
-          { iterations: 2 }
+      // Continuous rotation while visible
+      rotation.value = withRepeat(
+        withTiming(1, { duration: 2200, easing: Easing.linear }),
+        -1,
+        false
+      );
+
+      // Fade in → breathe twice → fade out
+      opacity.value = withSequence(
+        withTiming(1, { duration: 380, easing: Easing.out(Easing.cubic) }),
+        withTiming(1, { duration: TOTAL_MS - 380 - 700 }),
+        withTiming(0, { duration: 700, easing: Easing.in(Easing.cubic) })
+      );
+
+      scale.value = withSequence(
+        withTiming(1.02, { duration: 380, easing: Easing.out(Easing.cubic) }),
+        withRepeat(
+          withSequence(
+            withTiming(0.985, { duration: 750, easing: Easing.inOut(Easing.sin) }),
+            withTiming(1.02,  { duration: 750, easing: Easing.inOut(Easing.sin) }),
+          ),
+          2,
+          false
         ),
-        // Fade out
-        Animated.timing(opacity, {
-          toValue: 0,
-          duration: 800,
-          easing: Easing.in(Easing.cubic),
-          useNativeDriver: true,
-        }),
-      ]).start(() => setVisible(false));
+        withTiming(0.96, { duration: 700, easing: Easing.in(Easing.cubic) })
+      );
+
+      // Stop and hide
+      setTimeout(() => {
+        cancelAnimation(rotation);
+        setVisible(false);
+      }, TOTAL_MS + 100);
     };
 
     listeners.add(onTrigger);
-    return () => { listeners.delete(onTrigger); };
-  }, [opacity, pulse]);
+    return () => {
+      listeners.delete(onTrigger);
+      cancelAnimation(rotation);
+      cancelAnimation(opacity);
+      cancelAnimation(scale);
+    };
+  }, [opacity, scale, rotation]);
+
+  const animatedHostStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+    transform: [{ scale: scale.value }],
+  }));
+
+  // Derived transform so Skia repaints per frame as `rotation` changes.
+  const transform = useDerivedValue(() => [{ rotate: rotation.value * Math.PI * 2 }]);
 
   if (!visible) return null;
 
-  const { width: W, height: H } = Dimensions.get('window');
-  const orbSize = Math.max(W, H) * 0.95;
-
-  // Four corner orbs. Each is a circular linear gradient (color → transparent).
-  const orbs = [
-    { top: -orbSize * 0.35, left:  -orbSize * 0.35, color: palette[0] },
-    { top: -orbSize * 0.35, left:   W - orbSize * 0.65, color: palette[1] },
-    { top:  H - orbSize * 0.65, left: -orbSize * 0.35, color: palette[2] },
-    { top:  H - orbSize * 0.65, left:  W - orbSize * 0.65, color: palette[3] },
-  ];
+  const { width: W, height: H } = sizeRef.current;
+  // Inset the ring so the stroke sits ON the screen edges (half the stroke
+  // protrudes outside, half inside — this is what makes it look like the glow
+  // is hugging the bezel).
+  const inset = STROKE_WIDTH / 2;
+  const rectX = inset;
+  const rectY = inset;
+  const rectW = W - inset * 2;
+  const rectH = H - inset * 2;
+  const center = vec(W / 2, H / 2);
 
   return (
-    <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.host, { opacity }]}>
-      {orbs.map((o, i) => (
-        <Animated.View
-          key={i}
-          style={[
-            styles.orb,
-            {
-              width: orbSize,
-              height: orbSize,
-              borderRadius: orbSize / 2,
-              top: o.top,
-              left: o.left,
-              transform: [{ scale: pulse }],
-            },
-          ]}
-        >
-          <LinearGradient
-            colors={[o.color, `${o.color}00`]}
-            style={StyleSheet.absoluteFill}
-            start={{ x: 0.5, y: 0.5 }}
-            end={{ x: 1, y: 1 }}
-          />
-        </Animated.View>
-      ))}
-      {/* Soft inner vignette to keep content readable */}
-      <View pointerEvents="none" style={styles.vignette} />
+    <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, animatedHostStyle]}>
+      <View style={StyleSheet.absoluteFill}>
+        <Canvas style={{ flex: 1 }}>
+          <Group transform={transform} origin={center}>
+            <RoundedRect
+              x={rectX}
+              y={rectY}
+              width={rectW}
+              height={rectH}
+              r={CORNER_RADIUS}
+              style="stroke"
+              strokeWidth={STROKE_WIDTH}
+            >
+              <SweepGradient c={center} colors={COLORS} />
+            </RoundedRect>
+          </Group>
+          {/* Soft outer bloom — second copy with bigger stroke, lower alpha */}
+          <Group opacity={0.55} transform={transform} origin={center}>
+            <RoundedRect
+              x={rectX - 6}
+              y={rectY - 6}
+              width={rectW + 12}
+              height={rectH + 12}
+              r={CORNER_RADIUS + 6}
+              style="stroke"
+              strokeWidth={STROKE_WIDTH + BLUR_RADIUS}
+            >
+              <SweepGradient c={center} colors={COLORS} />
+            </RoundedRect>
+          </Group>
+        </Canvas>
+      </View>
     </Animated.View>
   );
 }
-
-const styles = StyleSheet.create({
-  host: {
-    overflow: 'hidden',
-    zIndex: 9999,
-    elevation: 9999,
-  },
-  orb: {
-    position: 'absolute',
-    opacity: 0.85,
-  },
-  vignette: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'transparent',
-  },
-});

@@ -1,12 +1,20 @@
 // Voice capture service — records audio and transcribes it via Groq Whisper.
 // Falls back to manual entry if no GROQ key is configured or the call fails.
 
-import { Audio } from 'expo-av';
 import { insertTask } from '../database/tasks';
 import { insertVoiceNote } from '../database/voiceNotes';
 import type { Task, VoiceNote } from '../types';
 import { generateId } from '../utils/constants';
 import { extractTasksFromNote, type ExtractedTask } from './aiService';
+
+// expo-av is lazy-required so Expo Go (which lacks the ExponentAV native
+// module in SDK 53+) doesn't crash the whole module at evaluation time.
+type AV = typeof import('expo-av');
+type AudioRecording = InstanceType<AV['Audio']['Recording']>;
+function AV(): AV {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  return require('expo-av') as AV;
+}
 
 const GROQ_AUDIO_URL = 'https://api.groq.com/openai/v1/audio/transcriptions';
 const GROQ_KEY = process.env.EXPO_PUBLIC_GROQ_API_KEY ?? '';
@@ -37,16 +45,18 @@ export async function transcribeAudio(uri: string): Promise<string> {
   return (await res.text()).trim();
 }
 
-let _recording: Audio.Recording | null = null;
+let _recording: AudioRecording | null = null;
 let _startedAt = 0;
 
 export async function ensurePermission(): Promise<boolean> {
+  const { Audio } = AV();
   const { status } = await Audio.requestPermissionsAsync();
   return status === 'granted';
 }
 
 export async function startRecording(): Promise<void> {
   if (_recording) return;
+  const { Audio } = AV();
   await Audio.setAudioModeAsync({
     allowsRecordingIOS: true,
     playsInSilentModeIOS: true,

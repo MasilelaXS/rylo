@@ -1,3 +1,4 @@
+import Constants from 'expo-constants';
 import * as QuickActions from 'expo-quick-actions';
 import { Stack, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -33,17 +34,21 @@ export default function RootLayout() {
     const unsubNotif = setupNotificationResponseHandler();
 
     // Ambient glow when a notification arrives in the foreground, or when the
-    // user taps one (cold-launch / background → foreground).
+    // user taps one (cold-launch / background → foreground). Skipped in Expo
+    // Go (SDK 53+ removed expo-notifications from Expo Go and any access
+    // throws / triggers DevicePushTokenAutoRegistration).
     let unsubRecv: (() => void) | undefined;
     let unsubResp: (() => void) | undefined;
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const Notifications = require('expo-notifications') as typeof import('expo-notifications');
-      const recvSub = Notifications.addNotificationReceivedListener(() => triggerNotificationGlow());
-      const respSub = Notifications.addNotificationResponseReceivedListener(() => triggerNotificationGlow());
-      unsubRecv = () => recvSub.remove();
-      unsubResp = () => respSub.remove();
-    } catch { /* expo-notifications unavailable (e.g. Expo Go) */ }
+    if (Constants.executionEnvironment !== 'storeClient') {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const Notifications = require('expo-notifications') as typeof import('expo-notifications');
+        const recvSub = Notifications.addNotificationReceivedListener(() => triggerNotificationGlow());
+        const respSub = Notifications.addNotificationResponseReceivedListener(() => triggerNotificationGlow());
+        unsubRecv = () => recvSub.remove();
+        unsubResp = () => respSub.remove();
+      } catch { /* expo-notifications unavailable */ }
+    }
 
     // Home-screen quick-action shortcuts
     setupQuickActions().catch(() => {});
