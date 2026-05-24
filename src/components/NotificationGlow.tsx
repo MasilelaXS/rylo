@@ -1,22 +1,15 @@
-// Google-Assistant-style edge glow rendered with Skia. A blurred, stroked
-// rounded rectangle is inset just outside the screen edges so the stroke
-// sits exactly on the border. A four-color sweep gradient rotates around it
-// (the same blue/red/yellow/green ring Assistant uses), and the whole layer
-// fades in, pulses, and fades out on every trigger.
+// Google-Assistant-style ambient glow: four large blurred colored blobs,
+// one anchored at each corner, breathing softly out of phase. The blobs
+// overlap along the edges so colors blend the way the Assistant ribbon does.
+// Built on @shopify/react-native-skia (Circle + BlurMask) with Reanimated
+// shared values driving radius + opacity per blob.
 
-import {
-  Canvas,
-  Group,
-  RoundedRect,
-  SweepGradient,
-  vec,
-} from '@shopify/react-native-skia';
+import { BlurMask, Canvas, Circle } from '@shopify/react-native-skia';
 import React, { useEffect, useRef, useState } from 'react';
 import { Dimensions, StyleSheet, View } from 'react-native';
-import Animated, {
+import {
   Easing,
   cancelAnimation,
-  useAnimatedStyle,
   useDerivedValue,
   useSharedValue,
   withRepeat,
@@ -29,13 +22,12 @@ const G_BLUE   = '#4285F4';
 const G_RED    = '#EA4335';
 const G_YELLOW = '#FBBC04';
 const G_GREEN  = '#34A853';
-const COLORS   = [G_BLUE, G_RED, G_YELLOW, G_GREEN, G_BLUE]; // last repeats for seamless wrap
 
-const STROKE_WIDTH  = 38;   // thickness of the colored ring
-const BLUR_RADIUS   = 26;   // softness — bigger = more bloom
-const CORNER_RADIUS = 60;   // rounded corners on the glow ring
-
-const TOTAL_MS = 4200;
+const TOTAL_MS    = 4200;
+const BREATHE_MS  = 900;
+const FADE_IN_MS  = 380;
+const FADE_OUT_MS = 700;
+const BLUR_SIGMA  = 60;
 
 // ─── Event bus ───────────────────────────────────────────────────────────────
 type Listener = () => void;
@@ -50,50 +42,46 @@ export default function NotificationGlow() {
   const [visible, setVisible] = useState(false);
   const sizeRef = useRef(Dimensions.get('window'));
 
-  const opacity  = useSharedValue(0);
-  const scale    = useSharedValue(0.96);
-  const rotation = useSharedValue(0); // 0..1 → mapped to 0..2π for the sweep
+  // Master fade for the whole overlay
+  const fade = useSharedValue(0);
+  // Four breathing values, phase-offset so blobs don't pulse in unison
+  const b0 = useSharedValue(0.7);
+  const b1 = useSharedValue(0.95);
+  const b2 = useSharedValue(0.75);
+  const b3 = useSharedValue(0.9);
 
   useEffect(() => {
     const onTrigger = () => {
       sizeRef.current = Dimensions.get('window');
       setVisible(true);
 
-      // Reset
-      opacity.value = 0;
-      scale.value = 0.96;
-      rotation.value = 0;
-
-      // Continuous rotation while visible
-      rotation.value = withRepeat(
-        withTiming(1, { duration: 2200, easing: Easing.linear }),
-        -1,
-        false
+      fade.value = 0;
+      fade.value = withSequence(
+        withTiming(1, { duration: FADE_IN_MS, easing: Easing.out(Easing.cubic) }),
+        withTiming(1, { duration: TOTAL_MS - FADE_IN_MS - FADE_OUT_MS }),
+        withTiming(0, { duration: FADE_OUT_MS, easing: Easing.in(Easing.cubic) })
       );
 
-      // Fade in → breathe twice → fade out
-      opacity.value = withSequence(
-        withTiming(1, { duration: 380, easing: Easing.out(Easing.cubic) }),
-        withTiming(1, { duration: TOTAL_MS - 380 - 700 }),
-        withTiming(0, { duration: 700, easing: Easing.in(Easing.cubic) })
-      );
-
-      scale.value = withSequence(
-        withTiming(1.02, { duration: 380, easing: Easing.out(Easing.cubic) }),
-        withRepeat(
+      const breathe = (sv: typeof b0, low: number, high: number) => {
+        sv.value = withRepeat(
           withSequence(
-            withTiming(0.985, { duration: 750, easing: Easing.inOut(Easing.sin) }),
-            withTiming(1.02,  { duration: 750, easing: Easing.inOut(Easing.sin) }),
+            withTiming(high, { duration: BREATHE_MS, easing: Easing.inOut(Easing.sin) }),
+            withTiming(low,  { duration: BREATHE_MS, easing: Easing.inOut(Easing.sin) }),
           ),
-          2,
-          false
-        ),
-        withTiming(0.96, { duration: 700, easing: Easing.in(Easing.cubic) })
-      );
+          -1,
+          true
+        );
+      };
+      breathe(b0, 0.70, 1.05);
+      breathe(b1, 0.80, 1.10);
+      breathe(b2, 0.65, 1.00);
+      breathe(b3, 0.85, 1.15);
 
-      // Stop and hide
       setTimeout(() => {
-        cancelAnimation(rotation);
+        cancelAnimation(b0);
+        cancelAnimation(b1);
+        cancelAnimation(b2);
+        cancelAnimation(b3);
         setVisible(false);
       }, TOTAL_MS + 100);
     };
@@ -101,66 +89,50 @@ export default function NotificationGlow() {
     listeners.add(onTrigger);
     return () => {
       listeners.delete(onTrigger);
-      cancelAnimation(rotation);
-      cancelAnimation(opacity);
-      cancelAnimation(scale);
+      cancelAnimation(fade);
+      cancelAnimation(b0);
+      cancelAnimation(b1);
+      cancelAnimation(b2);
+      cancelAnimation(b3);
     };
-  }, [opacity, scale, rotation]);
+  }, [fade, b0, b1, b2, b3]);
 
-  const animatedHostStyle = useAnimatedStyle(() => ({
-    opacity: opacity.value,
-    transform: [{ scale: scale.value }],
-  }));
+  const { width: W, height: H } = sizeRef.current;
+  // Base radius — large enough that the blob reaches the screen centre while
+  // its core sits at the corner. ~55% of the screen diagonal works well.
+  const baseR = Math.hypot(W, H) * 0.42;
 
-  // Derived transform so Skia repaints per frame as `rotation` changes.
-  const transform = useDerivedValue(() => [{ rotate: rotation.value * Math.PI * 2 }]);
+  // Per-blob derived radius (base × breathing value × master fade)
+  const r0 = useDerivedValue(() => baseR * b0.value * fade.value);
+  const r1 = useDerivedValue(() => baseR * b1.value * fade.value);
+  const r2 = useDerivedValue(() => baseR * b2.value * fade.value);
+  const r3 = useDerivedValue(() => baseR * b3.value * fade.value);
+
+  // Per-blob opacity (driven by master fade only — colors stay vivid)
+  const op = useDerivedValue(() => 0.85 * fade.value);
 
   if (!visible) return null;
 
-  const { width: W, height: H } = sizeRef.current;
-  // Inset the ring so the stroke sits ON the screen edges (half the stroke
-  // protrudes outside, half inside — this is what makes it look like the glow
-  // is hugging the bezel).
-  const inset = STROKE_WIDTH / 2;
-  const rectX = inset;
-  const rectY = inset;
-  const rectW = W - inset * 2;
-  const rectH = H - inset * 2;
-  const center = vec(W / 2, H / 2);
-
   return (
-    <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, animatedHostStyle]}>
-      <View style={StyleSheet.absoluteFill}>
-        <Canvas style={{ flex: 1 }}>
-          <Group transform={transform} origin={center}>
-            <RoundedRect
-              x={rectX}
-              y={rectY}
-              width={rectW}
-              height={rectH}
-              r={CORNER_RADIUS}
-              style="stroke"
-              strokeWidth={STROKE_WIDTH}
-            >
-              <SweepGradient c={center} colors={COLORS} />
-            </RoundedRect>
-          </Group>
-          {/* Soft outer bloom — second copy with bigger stroke, lower alpha */}
-          <Group opacity={0.55} transform={transform} origin={center}>
-            <RoundedRect
-              x={rectX - 6}
-              y={rectY - 6}
-              width={rectW + 12}
-              height={rectH + 12}
-              r={CORNER_RADIUS + 6}
-              style="stroke"
-              strokeWidth={STROKE_WIDTH + BLUR_RADIUS}
-            >
-              <SweepGradient c={center} colors={COLORS} />
-            </RoundedRect>
-          </Group>
-        </Canvas>
-      </View>
-    </Animated.View>
+    <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+      <Canvas style={{ flex: 1 }}>
+        {/* Top-left blue */}
+        <Circle cx={0} cy={0} r={r0} color={G_BLUE} opacity={op}>
+          <BlurMask blur={BLUR_SIGMA} style="normal" />
+        </Circle>
+        {/* Top-right red */}
+        <Circle cx={W} cy={0} r={r1} color={G_RED} opacity={op}>
+          <BlurMask blur={BLUR_SIGMA} style="normal" />
+        </Circle>
+        {/* Bottom-right yellow */}
+        <Circle cx={W} cy={H} r={r2} color={G_YELLOW} opacity={op}>
+          <BlurMask blur={BLUR_SIGMA} style="normal" />
+        </Circle>
+        {/* Bottom-left green */}
+        <Circle cx={0} cy={H} r={r3} color={G_GREEN} opacity={op}>
+          <BlurMask blur={BLUR_SIGMA} style="normal" />
+        </Circle>
+      </Canvas>
+    </View>
   );
 }
