@@ -9,7 +9,6 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 // Import database module so the sync open+schema runs before any screen mounts
 import ErrorBoundary from '../src/components/ErrorBoundary';
 import GlobalModalsHost from '../src/components/GlobalModalsHost';
-import NotificationGlow, { triggerNotificationGlow } from '../src/components/NotificationGlow';
 import '../src/database/database';
 import { registerNotificationCategories, requestNotificationPermission, scheduleDailyBriefings, setupNotificationResponseHandler } from '../src/notifications/notificationService';
 import { ingestSharedText, parseCaptureUrl, setupQuickActions } from '../src/services/captureService';
@@ -33,18 +32,16 @@ export default function RootLayout() {
     // Handle tapping notification actions
     const unsubNotif = setupNotificationResponseHandler();
 
-    // Ambient glow when a notification arrives in the foreground, or when the
-    // user taps one (cold-launch / background → foreground). Skipped in Expo
-    // Go (SDK 53+ removed expo-notifications from Expo Go and any access
-    // throws / triggers DevicePushTokenAutoRegistration).
+    // Foreground / response notification listeners. Skipped in Expo Go (SDK
+    // 53+ removed expo-notifications from Expo Go and any access throws).
     let unsubRecv: (() => void) | undefined;
     let unsubResp: (() => void) | undefined;
     if (Constants.executionEnvironment !== 'storeClient') {
       try {
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const Notifications = require('expo-notifications') as typeof import('expo-notifications');
-        const recvSub = Notifications.addNotificationReceivedListener(() => triggerNotificationGlow());
-        const respSub = Notifications.addNotificationResponseReceivedListener(() => triggerNotificationGlow());
+        const recvSub = Notifications.addNotificationReceivedListener(() => {});
+        const respSub = Notifications.addNotificationResponseReceivedListener(() => {});
         unsubRecv = () => recvSub.remove();
         unsubResp = () => respSub.remove();
       } catch { /* expo-notifications unavailable */ }
@@ -126,7 +123,6 @@ export default function RootLayout() {
             <Stack.Screen name="(tabs)" />
           </Stack>
           <GlobalModalsHost />
-          <NotificationGlow />
         </ErrorBoundary>
       </SafeAreaProvider>
     </GestureHandlerRootView>

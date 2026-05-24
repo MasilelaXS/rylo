@@ -5,7 +5,6 @@ import { ActivityIndicator, Alert, Platform, ScrollView, Share, StatusBar, Style
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BackgroundImage from '../../src/components/BackgroundImage';
 import BackupSection from '../../src/components/BackupSection';
-import { triggerNotificationGlow } from '../../src/components/NotificationGlow';
 import { cancelAllNotifications, getNotificationStatus, requestNotificationPermission, scheduleHourlyReminders, sendTestNotification } from '../../src/notifications/notificationService';
 import { openExactAlarmSettings, requestIgnoreBatteryOptimizations } from '../../src/services/reliabilityService';
 import { useNoteStore } from '../../src/store/noteStore';
@@ -225,7 +224,6 @@ export default function SettingsScreen() {
                       onPress={async () => {
                         const msg = await sendTestNotification(5);
                         const status = await getNotificationStatus();
-                        triggerNotificationGlow();
                         Alert.alert(
                           'Test notification',
                           `${msg}\n\nPermission: ${status.permission}\nQueued: ${status.scheduledCount}` +

@@ -1,5 +1,4 @@
 import * as Speech from 'expo-speech';
-import { triggerNotificationGlow } from '../components/NotificationGlow';
 import type { ReminderMode } from '../types';
 import { REMINDER_PHRASES } from '../utils/constants';
 
@@ -26,7 +25,6 @@ export function speakReminder(taskTitle: string, mode: ReminderMode, rate?: numb
   const text = template.replace('{task}', taskTitle);
 
   const opts = getVoiceOptions(rate);
-  triggerNotificationGlow();
   Speech.speak(text, {
     ...opts,
     pitch: mode === 'military' ? 0.85 : mode === 'aggressive' ? 1.1 : 1.0,
@@ -35,7 +33,6 @@ export function speakReminder(taskTitle: string, mode: ReminderMode, rate?: numb
 }
 
 export function speakText(text: string, rate?: number): void {
-  triggerNotificationGlow();
   Speech.speak(text, getVoiceOptions(rate));
 }
 
