@@ -116,7 +116,7 @@ export default function SettingsScreen() {
                 style={s.nameInput}
                 value={settings.userName ?? ''}
                 onChangeText={(v) => update({ userName: v })}
-                placeholder="e.g. Pieter"
+                placeholder="e.g. Alex"
                 placeholderTextColor={COLORS.textMuted}
                 returnKeyType="done"
                 maxLength={40}
@@ -186,7 +186,7 @@ export default function SettingsScreen() {
                       style={s.reliBtn}
                       onPress={() => {
                         requestNotificationPermission().then((ok) => {
-                          if (!ok) Alert.alert('Permission denied', 'Open Android Settings → Apps → Pieter → Notifications and allow them.');
+                          if (!ok) Alert.alert('Permission denied', 'Open Android Settings → Apps → Rylo → Notifications and allow them.');
                         });
                       }}
                     >
@@ -435,7 +435,7 @@ export default function SettingsScreen() {
                     projects,
                   };
                   const json = JSON.stringify(payload, null, 2);
-                  await Share.share({ message: json, title: 'Pieter Export' });
+                  await Share.share({ message: json, title: 'Rylo Export' });
                 } catch (e) {
                   Alert.alert('Export failed', 'Could not share data.');
                 } finally {

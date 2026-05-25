@@ -48,7 +48,7 @@ export async function ingestSharedText(text: string): Promise<Task | null> {
   return task;
 }
 
-/** Parses incoming deep links like pieter://capture?text=... */
+/** Parses incoming deep links like rylo://capture?text=... */
 export function parseCaptureUrl(url: string): string | null {
   try {
     const parsed = Linking.parse(url);

@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "Pieter",
-    "slug": "Pieter",
+    "name": "Rylo",
+    "slug": "Rylo",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "pieter",
+    "scheme": "rylo",
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
@@ -37,7 +37,7 @@
           ],
           "data": [
             {
-              "scheme": "pieter"
+              "scheme": "rylo"
             }
           ]
         },

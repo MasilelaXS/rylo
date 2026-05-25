@@ -143,7 +143,7 @@ export async function sendTestNotification(delaySec: number = 5): Promise<string
   if (perm.status !== 'granted') {
     const req = await Notifications.requestPermissionsAsync();
     if (req.status !== 'granted') {
-      return 'Permission denied. Open Android Settings → Apps → Pieter → Notifications and allow them.';
+      return 'Permission denied. Open Android Settings → Apps → Rylo → Notifications and allow them.';
     }
   }
 
@@ -174,7 +174,7 @@ export async function sendTestNotification(delaySec: number = 5): Promise<string
         date: trigger,
       },
     });
-    return `Scheduled (id ${id.slice(0, 6)}…). Lock the screen and wait ${delaySec}s. If nothing fires, the OS is killing background work — open Battery optimisation and whitelist Pieter.`;
+    return `Scheduled (id ${id.slice(0, 6)}…). Lock the screen and wait ${delaySec}s. If nothing fires, the OS is killing background work — open Battery optimisation and whitelist Rylo.`;
   } catch (err: unknown) {
     return `Schedule failed: ${err instanceof Error ? err.message : String(err)}`;
   }

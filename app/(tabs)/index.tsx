@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
+  Image,
   ImageBackground,
   Platform,
   ScrollView,
@@ -186,6 +187,10 @@ export default function DashboardScreen() {
           {/* ── Header ─────────────────────────────────────────────── */}
           <View style={s.header}>
             <View>
+              <View style={s.brandRow}>
+                <Image source={require('../../assets/images/icon.png')} style={s.brandIcon} />
+                <Text style={s.brandName}>Rylo</Text>
+              </View>
               <Text style={s.greeting}>{getGreeting()}</Text>
               <Text style={s.date}>
                 {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
@@ -430,6 +435,9 @@ const s = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20, marginTop: 4 },
   headerActions: { flexDirection: 'row', gap: 10 },
   greeting: { fontSize: 22, fontWeight: '700', color: COLORS.text },
+  brandRow:  { flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 5 },
+  brandIcon: { width: 24, height: 24, borderRadius: 6 },
+  brandName: { fontSize: 13, fontWeight: '800', color: COLORS.primary, letterSpacing: 0.4 },
   date:     { fontSize: 13, color: COLORS.textSub, marginTop: 3 },
   iconBtn: {
     width: 42, height: 42, borderRadius: 21,

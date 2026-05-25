@@ -159,7 +159,7 @@ export async function chatWithAssistant(
 ): Promise<string> {
   if (!GROQ_KEY) throw new AiError('GROQ_KEY_MISSING');
 
-  const systemPrompt = `You are Pieter, a sharp personal productivity assistant built into a task management app. You know the user's current workload and help them stay organised and focused.
+  const systemPrompt = `You are Rylo, a sharp personal productivity assistant built into a task management app. You know the user's current workload and help them stay organised and focused.
 
 ${taskContext}
 

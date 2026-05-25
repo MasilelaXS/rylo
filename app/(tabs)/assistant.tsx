@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     ActivityIndicator,
+    Image,
     KeyboardAvoidingView,
     Platform,
     ScrollView,
@@ -349,11 +350,9 @@ export default function AssistantScreen() {
       <SafeAreaView edges={['top']} style={{ backgroundColor: COLORS.bg }}>
         <View style={s.header}>
           <View style={s.headerLeft}>
-            <View style={s.avatar}>
-              <Ionicons name="sparkles" size={18} color="#fff" />
-            </View>
+            <Image source={require('../../assets/images/icon.png')} style={s.avatar} />
             <View>
-              <Text style={s.title}>Pieter AI</Text>
+              <Text style={s.title}>Rylo AI</Text>
               <Text style={s.subtitle}>Your productivity assistant</Text>
             </View>
           </View>
@@ -380,10 +379,8 @@ export default function AssistantScreen() {
           {messages.length === 0 ? (
             <>
               <View style={s.welcome}>
-                <View style={s.welcomeOrb}>
-                  <Ionicons name="sparkles" size={30} color={COLORS.primary} />
-                </View>
-                <Text style={s.welcomeTitle}>Hi, I&apos;m Pieter AI</Text>
+                <Image source={require('../../assets/images/icon.png')} style={s.welcomeOrb} />
+                <Text style={s.welcomeTitle}>Hi, I&apos;m Rylo AI</Text>
                 <Text style={s.welcomeSub}>
                   Ask me anything about your tasks, or say &quot;create a task&quot; to add one directly from our conversation.
                 </Text>
@@ -470,10 +467,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 20, paddingTop: 6, paddingBottom: 12,
   },
   headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  avatar: {
-    width: 42, height: 42, borderRadius: 21, backgroundColor: COLORS.primary,
-    alignItems: 'center', justifyContent: 'center',
-  },
+  avatar: { width: 42, height: 42, borderRadius: 14 },
   title:    { fontSize: 17, fontWeight: '700', color: COLORS.text },
   subtitle: { fontSize: 12, color: COLORS.textMuted, marginTop: 1 },
   clearBtn: {
@@ -483,10 +477,7 @@ const s = StyleSheet.create({
   list:        { flex: 1 },
   listContent: { paddingHorizontal: 16, paddingTop: 8 },
   welcome: { alignItems: 'center', paddingVertical: 24, paddingHorizontal: 16 },
-  welcomeOrb: {
-    width: 72, height: 72, borderRadius: 36, backgroundColor: COLORS.primaryLight,
-    alignItems: 'center', justifyContent: 'center', marginBottom: 16,
-  },
+  welcomeOrb: { width: 72, height: 72, borderRadius: 20, marginBottom: 16 },
   welcomeTitle: { fontSize: 20, fontWeight: '800', color: COLORS.text, marginBottom: 8 },
   welcomeSub:   { fontSize: 14, color: COLORS.textSub, textAlign: 'center', lineHeight: 21 },
   starterLabel: {

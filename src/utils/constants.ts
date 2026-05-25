@@ -165,7 +165,7 @@ export const REMINDER_PHRASES: Record<string, string[]> = {
 export const COMMUNICATION_TYPES = ['call', 'email', 'message', 'meeting', 'apology', 'follow-up', 'inform'] as const;
 
 // ─── App info ─────────────────────────────────────────────────────────────────
-export const APP_NAME = 'Pieter';
+export const APP_NAME = 'Rylo';
 export const DB_NAME = 'pieter.db';
 
 // ─── UUID generator (crypto.randomUUID is unavailable in Hermes) ─────────────

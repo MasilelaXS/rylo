@@ -56,7 +56,7 @@ export async function exportEncryptedBackup(passphrase: string): Promise<string>
   const cipher = encrypt(JSON.stringify(data), passphrase);
   const stamp = new Date().toISOString().replace(/[:.]/g, '-');
   const dir = FileSystem.documentDirectory ?? FileSystem.cacheDirectory ?? '';
-  const path = `${dir}pieter-backup-${stamp}.pieterbak`;
+  const path = `${dir}rylo-backup-${stamp}.rylobak`;
   await FileSystem.writeAsStringAsync(path, cipher, { encoding: FileSystem.EncodingType.UTF8 });
 
   if (await Sharing.isAvailableAsync()) {
@@ -73,7 +73,7 @@ export async function importEncryptedBackup(passphrase: string): Promise<{ resto
   const plain = decrypt(cipher, passphrase);
   if (!plain) throw new Error('Wrong passphrase or corrupted backup.');
   const payload = JSON.parse(plain) as BackupPayload;
-  if (payload.magic !== MAGIC) throw new Error('Not a Pieter backup file.');
+  if (payload.magic !== MAGIC) throw new Error('Not a Rylo backup file.');
 
   const db = await getDatabase();
   let restored = 0;
