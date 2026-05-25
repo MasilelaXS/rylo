@@ -13,8 +13,9 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/android-icon-background.png",
-        "backgroundColor": "#33A8FF"
+        "foregroundImage": "./assets/images/android-icon-foreground.png",
+        "backgroundColor": "#ffffff",
+        "monochromeImage": "./assets/images/android-icon-monochrome-light.png"
       },
       "permissions": [
         "android.permission.SCHEDULE_EXACT_ALARM",
@@ -63,7 +64,7 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/images/android-icon-monochrome.png",
+          "icon": "./assets/images/android-icon-monochrome-light.png",
           "color": "#1E90FF",
           "sounds": []
         }
