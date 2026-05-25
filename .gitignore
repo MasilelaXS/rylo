@@ -32,7 +32,6 @@ yarn-error.*
 
 # local env files
 .env*.local
-.env
 
 # accidental files
 }
@@ -45,3 +44,4 @@ app-example
 # generated native folders
 /ios
 /android
+.env
