@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
     StyleSheet,
     Text,
@@ -27,14 +27,14 @@ export default function SubtaskList({ taskId, editable = false }: Props) {
   const [newTitle, setNewTitle] = useState('');
   const inputRef = useRef<TextInput>(null);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     const rows = await getSubtasksForTask(taskId);
     setSubtasks(rows);
-  };
+  }, [taskId]);
 
   useEffect(() => {
     if (taskId) load();
-  }, [taskId]);
+  }, [taskId, load]);
 
   const handleAdd = async () => {
     const title = newTitle.trim();

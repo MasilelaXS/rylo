@@ -2,7 +2,7 @@
 // user pick channel + recipient and fire it through the OS share/sms/mailto.
 
 import { Ionicons } from '@expo/vector-icons';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { startCall } from '../services/callService';
 import { copyDraft, generateDraft, saveDraft, sendDraft } from '../services/messagingService';
@@ -55,6 +55,17 @@ export default function CommDraftModal({ visible, task, onClose, onSent }: CommD
   const handleCopy = async () => {
     await copyDraft(body);
   };
+
+  const handleRegenerate = useCallback(async () => {
+    if (!task || loading) return;
+    setLoading(true);
+    try {
+      const b = await generateDraft(task, channel);
+      setBody(b);
+    } finally {
+      setLoading(false);
+    }
+  }, [task, channel, loading]);
 
   if (!task) return null;
 
@@ -118,7 +129,7 @@ export default function CommDraftModal({ visible, task, onClose, onSent }: CommD
               <Ionicons name="copy-outline" size={16} color={COLORS.primary} />
               <Text style={s.actionPillText}>Copy</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={s.actionPill} onPress={async () => { setLoading(true); const b = await generateDraft(task, channel); setBody(b); setLoading(false); }}>
+            <TouchableOpacity style={s.actionPill} onPress={handleRegenerate} disabled={loading}>
               <Ionicons name="refresh" size={16} color={COLORS.primary} />
               <Text style={s.actionPillText}>Regenerate</Text>
             </TouchableOpacity>

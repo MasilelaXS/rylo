@@ -51,13 +51,13 @@ _db.execSync(`CREATE TABLE IF NOT EXISTS communication_logs (
 )`);
 
 // Column migration — safe to ignore if already exists
-try { _db.execSync(`ALTER TABLE tasks ADD COLUMN location TEXT DEFAULT ''`); } catch (_) {}
-try { _db.execSync(`ALTER TABLE tasks ADD COLUMN estimated_minutes INTEGER DEFAULT 0`); } catch (_) {}
-try { _db.execSync(`ALTER TABLE tasks ADD COLUMN completed_at INTEGER`); } catch (_) {}
-try { _db.execSync(`ALTER TABLE tasks ADD COLUMN committed INTEGER DEFAULT 0`); } catch (_) {}
-try { _db.execSync(`ALTER TABLE tasks ADD COLUMN category TEXT DEFAULT 'general'`); } catch (_) {}
-try { _db.execSync(`ALTER TABLE tasks ADD COLUMN comm_status TEXT`); } catch (_) {}
-try { _db.execSync(`ALTER TABLE tasks ADD COLUMN difficulty INTEGER DEFAULT 0`); } catch (_) {}
+try { _db.execSync(`ALTER TABLE tasks ADD COLUMN location TEXT DEFAULT ''`); } catch {}
+try { _db.execSync(`ALTER TABLE tasks ADD COLUMN estimated_minutes INTEGER DEFAULT 0`); } catch {}
+try { _db.execSync(`ALTER TABLE tasks ADD COLUMN completed_at INTEGER`); } catch {}
+try { _db.execSync(`ALTER TABLE tasks ADD COLUMN committed INTEGER DEFAULT 0`); } catch {}
+try { _db.execSync(`ALTER TABLE tasks ADD COLUMN category TEXT DEFAULT 'general'`); } catch {}
+try { _db.execSync(`ALTER TABLE tasks ADD COLUMN comm_status TEXT`); } catch {}
+try { _db.execSync(`ALTER TABLE tasks ADD COLUMN difficulty INTEGER DEFAULT 0`); } catch {}
 
 _db.execSync(`CREATE TABLE IF NOT EXISTS notes (
   id TEXT PRIMARY KEY NOT NULL,

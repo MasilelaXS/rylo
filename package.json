@@ -21,7 +21,7 @@
     "@react-navigation/native": "^7.1.8",
     "crypto-js": "^4.2.0",
     "expo": "~55.0.26",
-    "expo-av": "^16.0.8",
+    "expo-audio": "~55.0.14",
     "expo-blur": "~55.0.14",
     "expo-clipboard": "~55.0.13",
     "expo-constants": "~55.0.16",
@@ -73,9 +73,7 @@
   "expo": {
     "doctor": {
       "reactNativeDirectoryCheck": {
-        "exclude": [
-          "expo-av"
-        ]
+        "exclude": []
       }
     }
   },

@@ -1,20 +1,12 @@
-// Voice capture service — records audio and transcribes it via Groq Whisper.
-// Falls back to manual entry if no GROQ key is configured or the call fails.
+// Voice capture service — transcribes audio via Groq Whisper and saves the
+// resulting note + extracted tasks. Recording itself is handled by the
+// component using the `expo-audio` hook API (see VoiceCaptureModal).
 
 import { insertTask } from '../database/tasks';
 import { insertVoiceNote } from '../database/voiceNotes';
 import type { Task, VoiceNote } from '../types';
 import { generateId } from '../utils/constants';
 import { extractTasksFromNote, type ExtractedTask } from './aiService';
-
-// expo-av is lazy-required so Expo Go (which lacks the ExponentAV native
-// module in SDK 53+) doesn't crash the whole module at evaluation time.
-type AV = typeof import('expo-av');
-type AudioRecording = InstanceType<AV['Audio']['Recording']>;
-function AV(): AV {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  return require('expo-av') as AV;
-}
 
 const GROQ_AUDIO_URL = 'https://api.groq.com/openai/v1/audio/transcriptions';
 const GROQ_KEY = process.env.EXPO_PUBLIC_GROQ_API_KEY ?? '';
@@ -43,45 +35,6 @@ export async function transcribeAudio(uri: string): Promise<string> {
   }
   // response_format=text returns plain text body
   return (await res.text()).trim();
-}
-
-let _recording: AudioRecording | null = null;
-let _startedAt = 0;
-
-export async function ensurePermission(): Promise<boolean> {
-  const { Audio } = AV();
-  const { status } = await Audio.requestPermissionsAsync();
-  return status === 'granted';
-}
-
-export async function startRecording(): Promise<void> {
-  if (_recording) return;
-  const { Audio } = AV();
-  await Audio.setAudioModeAsync({
-    allowsRecordingIOS: true,
-    playsInSilentModeIOS: true,
-    staysActiveInBackground: false,
-    shouldDuckAndroid: true,
-  });
-  const rec = new Audio.Recording();
-  await rec.prepareToRecordAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
-  await rec.startAsync();
-  _recording = rec;
-  _startedAt = Date.now();
-}
-
-export async function stopRecording(): Promise<{ uri: string | null; durationMs: number }> {
-  if (!_recording) return { uri: null, durationMs: 0 };
-  await _recording.stopAndUnloadAsync();
-  const uri = _recording.getURI();
-  const duration = Date.now() - _startedAt;
-  _recording = null;
-  _startedAt = 0;
-  return { uri, durationMs: duration };
-}
-
-export async function isRecording(): Promise<boolean> {
-  return !!_recording;
 }
 
 export async function saveTranscript(transcript: string, audioUri: string | null, durationMs: number): Promise<{

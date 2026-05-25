@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { useCallback, useRef, useState } from 'react';
+import { memo, useCallback, useRef, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
 import type { Task } from '../types';
@@ -29,7 +29,7 @@ function formatMinutes(m: number): string {
   return rem ? `${h}h ${rem}m` : `${h}h`;
 }
 
-export default function TaskCard({ task, onComplete, onSnooze, onPress }: Props) {
+function TaskCard({ task, onComplete, onSnooze, onPress }: Props) {
   const swipeRef = useRef<Swipeable>(null);
   const didTrigger = useRef(false);
   const priority = PRIORITY_CONFIG[task.priority];
@@ -260,3 +260,5 @@ const s = StyleSheet.create({
   },
   swipeLabel: { color: '#fff', fontSize: 11, fontWeight: '700' },
 });
+
+export default memo(TaskCard);

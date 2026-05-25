@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     FlatList,
     Modal,
@@ -45,6 +45,35 @@ const KIND_LABEL: Record<ResultKind, string> = {
   note:    'Note',
   project: 'Project',
 };
+
+const SearchResultItem = memo(function SearchResultItem({
+  item,
+  onPress,
+}: {
+  item: SearchResult;
+  onPress: () => void;
+}) {
+  return (
+    <TouchableOpacity style={s.row} activeOpacity={0.7} onPress={onPress}>
+      <View style={[s.iconWrap, { backgroundColor: KIND_COLOR[item.kind] + '20' }]}>
+        <Ionicons name={KIND_ICON[item.kind]} size={18} color={KIND_COLOR[item.kind]} />
+      </View>
+      <View style={s.rowBody}>
+        <Text style={s.rowTitle} numberOfLines={1}>{item.title}</Text>
+        {item.subtitle ? (
+          <Text style={s.rowSub} numberOfLines={1}>{item.subtitle}</Text>
+        ) : null}
+      </View>
+      <View style={[s.kindBadge, { backgroundColor: KIND_COLOR[item.kind] + '18' }]}>
+        <Text style={[s.kindText, { color: KIND_COLOR[item.kind] }]}>
+          {KIND_LABEL[item.kind]}
+        </Text>
+      </View>
+    </TouchableOpacity>
+  );
+});
+
+const ItemSeparator = () => <View style={s.sep} />;
 
 export default function GlobalSearch({ visible, onClose }: Props) {
   const [query, setQuery] = useState('');
@@ -113,6 +142,13 @@ export default function GlobalSearch({ visible, onClose }: Props) {
     return matched;
   }, [query, tasks, notes, projects]);
 
+  const renderItem = useCallback(
+    ({ item }: { item: SearchResult }) => (
+      <SearchResultItem item={item} onPress={onClose} />
+    ),
+    [onClose],
+  );
+
   return (
     <Modal
       visible={visible}
@@ -158,25 +194,8 @@ export default function GlobalSearch({ visible, onClose }: Props) {
               keyExtractor={(r) => `${r.kind}:${r.id}`}
               keyboardShouldPersistTaps="handled"
               contentContainerStyle={{ paddingBottom: 20 }}
-              renderItem={({ item }) => (
-                <TouchableOpacity style={s.row} activeOpacity={0.7} onPress={onClose}>
-                  <View style={[s.iconWrap, { backgroundColor: KIND_COLOR[item.kind] + '20' }]}>
-                    <Ionicons name={KIND_ICON[item.kind]} size={18} color={KIND_COLOR[item.kind]} />
-                  </View>
-                  <View style={s.rowBody}>
-                    <Text style={s.rowTitle} numberOfLines={1}>{item.title}</Text>
-                    {item.subtitle ? (
-                      <Text style={s.rowSub} numberOfLines={1}>{item.subtitle}</Text>
-                    ) : null}
-                  </View>
-                  <View style={[s.kindBadge, { backgroundColor: KIND_COLOR[item.kind] + '18' }]}>
-                    <Text style={[s.kindText, { color: KIND_COLOR[item.kind] }]}>
-                      {KIND_LABEL[item.kind]}
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-              )}
-              ItemSeparatorComponent={() => <View style={s.sep} />}
+              renderItem={renderItem}
+              ItemSeparatorComponent={ItemSeparator}
             />
           )}
         </View>

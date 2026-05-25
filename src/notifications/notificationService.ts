@@ -10,21 +10,20 @@ import { ESCALATION_CONFIG } from '../utils/constants';
 const IS_EXPO_GO = Constants.executionEnvironment === 'storeClient';
 
 // Lazily require expo-notifications and configure the foreground handler once.
-let _notifHandlerSet = false;
+let _notifications: typeof import('expo-notifications') | null = null;
 function N(): typeof import('expo-notifications') {
+  if (_notifications) return _notifications;
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const Notifications = require('expo-notifications') as typeof import('expo-notifications');
-  if (!_notifHandlerSet) {
-    Notifications.setNotificationHandler({
-      handleNotification: async () => ({
-        shouldShowBanner: true,
-        shouldPlaySound: true,
-        shouldSetBadge: true,
-        shouldShowList: true,
-      }),
-    });
-    _notifHandlerSet = true;
-  }
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowBanner: true,
+      shouldPlaySound: true,
+      shouldSetBadge: true,
+      shouldShowList: true,
+    }),
+  });
+  _notifications = Notifications;
   return Notifications;
 }
 

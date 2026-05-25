@@ -71,20 +71,26 @@ export default function FocusTimer({ visible, onClose, taskTitle, estimatedMinut
 
   useEffect(() => {
     if (!running) return;
-    intervalRef.current = setInterval(() => {
+    let cancelled = false;
+    const id = setInterval(() => {
+      if (cancelled) return;
       setSeconds((s) => {
         if (s <= 1) {
-          clearInterval(intervalRef.current!);
+          clearInterval(id);
           intervalRef.current = null;
           setRunning(false);
 
           // Advance phase
           setPhase((p) => {
-            const nextSessions = p === 'work' ? sessions + 1 : sessions;
-            if (p === 'work') setSessions(nextSessions);
+            // Use functional update so we don't read a stale `sessions`.
+            let nextSessionsLocal = 0;
+            setSessions((curr) => {
+              nextSessionsLocal = p === 'work' ? curr + 1 : curr;
+              return nextSessionsLocal;
+            });
             notifyDone(p);
             const next: Phase = p === 'work'
-              ? (nextSessions % 4 === 0 ? 'longBreak' : 'break')
+              ? (nextSessionsLocal % 4 === 0 ? 'longBreak' : 'break')
               : 'work';
             setSeconds(totalSecs(next));
             return next;
@@ -94,7 +100,14 @@ export default function FocusTimer({ visible, onClose, taskTitle, estimatedMinut
         return s - 1;
       });
     }, 1000);
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+    intervalRef.current = id;
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+      intervalRef.current = null;
+    };
+    // notifyDone/totalSecs are stable enough; we only want this to (re)start when `running` toggles.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [running]);
 
   const handleReset = () => {

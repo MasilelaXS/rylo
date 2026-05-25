@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { memo } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import type { Project } from '../types';
 import { CARD_SHADOW_SM, COLORS } from '../utils/constants';
@@ -10,7 +11,7 @@ interface Props {
   onPress: (project: Project) => void;
 }
 
-export default function ProjectCard({ project, taskCount = 0, completedCount = 0, onPress }: Props) {
+function ProjectCard({ project, taskCount = 0, completedCount = 0, onPress }: Props) {
   const progressPct = taskCount > 0 ? Math.round((completedCount / taskCount) * 100) : 0;
   return (
     <TouchableOpacity onPress={() => onPress(project)} activeOpacity={0.75} style={[s.card, CARD_SHADOW_SM]}>
@@ -82,6 +83,8 @@ const s = StyleSheet.create({
   countText: { fontSize: 14, fontWeight: '700', lineHeight: 16 },
   countLabel: { fontSize: 9, fontWeight: '600', letterSpacing: 0.3, opacity: 0.7 },
 });
+
+export default memo(ProjectCard);
 
 
 
