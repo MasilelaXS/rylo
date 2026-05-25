@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Rylo",
-    "slug": "Pieter",
+    "slug": "rylo",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -94,7 +94,7 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "2b3572e9-5647-4c55-b94b-ff2c3c45983f"
+        "projectId": "978727be-bdbd-43b8-bde2-d9696bd466bf"
       }
     }
   }
