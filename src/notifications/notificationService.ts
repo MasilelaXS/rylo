@@ -73,7 +73,7 @@ export async function scheduleTaskReminder(task: Task): Promise<string | null> {
       data: { taskId: task.id, escalationLevel: 1 },
       sound: 'default',
       categoryIdentifier: 'task-reminder',
-      ...(Platform.OS === 'android' && { channelId: 'reminders' }),
+      ...(Platform.OS === 'android' && { channelId: 'reminders', largeIcon: 'drawer' }),
     },
     trigger: {
       type: Notifications.SchedulableTriggerInputTypes.DATE,
@@ -100,7 +100,7 @@ export async function scheduleEscalation(task: Task, escalationLevel: number): P
       body: `Escalation Level ${escalationLevel}: ${config.label}. This task is still incomplete.`,
       data: { taskId: task.id, escalationLevel },
       sound: 'default',
-      ...(Platform.OS === 'android' && { channelId: 'escalation' }),
+      ...(Platform.OS === 'android' && { channelId: 'escalation', largeIcon: 'drawer' }),
     },
     trigger: {
       type: Notifications.SchedulableTriggerInputTypes.DATE,
@@ -167,7 +167,7 @@ export async function sendTestNotification(delaySec: number = 5): Promise<string
         body: `If you see this, notifications are working. (${delaySec}s test)`,
         data: { type: 'test' },
         sound: 'default',
-        ...(Platform.OS === 'android' && { channelId: 'reminders' }),
+        ...(Platform.OS === 'android' && { channelId: 'reminders', largeIcon: 'drawer' }),
       },
       trigger: {
         type: Notifications.SchedulableTriggerInputTypes.DATE,
@@ -256,7 +256,7 @@ export async function scheduleDailyBriefings(tasks: Task[]): Promise<void> {
         body: bodies[label],
         data: { type: 'daily-briefing', briefingType: label },
         sound: 'default',
-        ...(Platform.OS === 'android' && { channelId: 'reminders' }),
+        ...(Platform.OS === 'android' && { channelId: 'reminders', largeIcon: 'drawer' }),
       },
       trigger: {
         type: Notifications.SchedulableTriggerInputTypes.DATE,
@@ -418,7 +418,7 @@ export async function scheduleHourlyReminders(tasks: Task[]): Promise<void> {
         body,
         data: { type: 'hourly-summary' },
         sound: 'default',
-        ...(Platform.OS === 'android' && { channelId: 'reminders' }),
+        ...(Platform.OS === 'android' && { channelId: 'reminders', largeIcon: 'drawer' }),
       },
       trigger: {
         type: Notifications.SchedulableTriggerInputTypes.DATE,

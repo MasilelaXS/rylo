@@ -213,7 +213,7 @@ export default function DashboardScreen() {
                 style={s.iconBtn}
                 onPress={() => settings.voiceEnabled && speakMorningBriefing(stats.total, stats.overdue)}
               >
-                <Ionicons name="notifications-outline" size={21} color={COLORS.text} />
+                <Ionicons name="notifications-outline" size={28} color={COLORS.text} />
               </TouchableOpacity>
               <TouchableOpacity
                 style={s.iconBtn}

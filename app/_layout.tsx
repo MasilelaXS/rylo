@@ -14,7 +14,7 @@ import { registerNotificationCategories, requestNotificationPermission, schedule
 import { ingestSharedText, parseCaptureUrl, setupQuickActions } from '../src/services/captureService';
 import { useSettingsStore } from '../src/store/settingsStore';
 import { useTaskStore } from '../src/store/taskStore';
-import { speakHourlySummary } from '../src/voice/ttsService';
+import { speakHourlySummary, speakText } from '../src/voice/ttsService';
 
 export default function RootLayout() {
   const lastSummaryRef = useRef<number>(0);
@@ -40,7 +40,26 @@ export default function RootLayout() {
       try {
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const Notifications = require('expo-notifications') as typeof import('expo-notifications');
-        const recvSub = Notifications.addNotificationReceivedListener(() => {});
+        const recvSub = Notifications.addNotificationReceivedListener((notification) => {
+          const { settings } = useSettingsStore.getState();
+          if (!settings.voiceEnabled) return;
+          const dataType = notification.request.content.data?.type as string | undefined;
+          const now = Date.now();
+          const { tasks } = useTaskStore.getState();
+          const pending = tasks.filter((t) => t.status !== 'completed' && t.status !== 'cancelled');
+          const overdue = pending.filter((t) => t.dueDate < now);
+          const next = pending.filter((t) => t.dueDate >= now).sort((a, b) => a.dueDate - b.dueDate)[0];
+          const nextArg = next
+            ? { title: next.title, dueTime: new Date(next.dueDate).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) }
+            : undefined;
+          if (dataType === 'task-reminder') {
+            const taskId = notification.request.content.data?.taskId as string | undefined;
+            const task = tasks.find((t) => t.id === taskId);
+            if (task) { speakText(`Task due now: ${task.title}`); return; }
+          }
+          lastSummaryRef.current = now;
+          speakHourlySummary(pending.length, overdue.length, nextArg);
+        });
         const respSub = Notifications.addNotificationResponseReceivedListener(() => {});
         unsubRecv = () => recvSub.remove();
         unsubResp = () => respSub.remove();
@@ -89,8 +108,7 @@ export default function RootLayout() {
   }, []);
 
   useEffect(() => {
-    const sub = AppState.addEventListener('change', (state: AppStateStatus) => {
-      if (state !== 'active') return;
+    function doHourlySpeak() {
       const now = Date.now();
       const hourMs = 60 * 60 * 1000;
       if (now - lastSummaryRef.current < hourMs) return;
@@ -109,9 +127,20 @@ export default function RootLayout() {
         ? { title: next.title, dueTime: new Date(next.dueDate).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) }
         : undefined;
       speakHourlySummary(pending.length, overdue.length, nextArg);
+    }
+
+    // Fires when app returns to foreground from background
+    const sub = AppState.addEventListener('change', (state: AppStateStatus) => {
+      if (state === 'active') doHourlySpeak();
     });
 
-    return () => sub.remove();
+    // Also fires every hour while the app stays continuously in the foreground
+    const intervalId = setInterval(doHourlySpeak, 60 * 60 * 1000);
+
+    return () => {
+      sub.remove();
+      clearInterval(intervalId);
+    };
   }, []);
 
   return (
