@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
     ScrollView,
@@ -40,6 +41,7 @@ function isQuietInDay(
 }
 
 export default function CalendarScreen() {
+  const router = useRouter();
   const { tasks, loadAll, addTask, markComplete, snoozeTask } = useTaskStore();
   const { projects, loadAll: loadProjects } = useProjectStore();
 
@@ -235,10 +237,22 @@ export default function CalendarScreen() {
                       : `${selectedTasks.length} task${selectedTasks.length > 1 ? 's' : ''}`}
                   </Text>
                 </View>
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                <TouchableOpacity
+                  style={[s.addDayBtn, { backgroundColor: '#F0EDFF' }]}
+                  onPress={() => {
+                    const key = `${year}-${String(month + 1).padStart(2, '0')}-${String(selectedDay).padStart(2, '0')}`;
+                    router.push(`/(tabs)/dayplanner?date=${key}` as never);
+                  }}
+                >
+                  <Ionicons name="time-outline" size={18} color="#7C5CBF" />
+                  <Text style={[s.addDayText, { color: '#7C5CBF' }]}>Day View</Text>
+                </TouchableOpacity>
                 <TouchableOpacity style={s.addDayBtn} onPress={handleAddFromDay}>
                   <Ionicons name="add" size={18} color={COLORS.primary} />
                   <Text style={s.addDayText}>Add Task</Text>
                 </TouchableOpacity>
+              </View>
               </View>
 
               {selectedTasks.length === 0 ? (

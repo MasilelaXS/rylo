@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import {
     Modal,
@@ -66,6 +67,7 @@ const SECTION_COLORS: Record<string, string> = { Overdue: '#FF6B6B', Today: '#6B
 
 // ─── Main merged screen ───────────────────────────────────────────────────────
 export default function WorkspaceScreen() {
+  const router    = useRouter();
   const { tasks, todayTasks, overdueTasks, loadAll, addTask, markComplete, snoozeTask, editTask: saveEdit, removeTask } = useTaskStore();
   const { projects, loadAll: loadProjects, addProject } = useProjectStore();
   const insets    = useSafeAreaInsets();
@@ -84,6 +86,7 @@ export default function WorkspaceScreen() {
   const [sortKey, setSortKey] = useState<'due' | 'priority' | 'created' | 'title' | 'duration'>('due');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const isSelecting = selectedIds.size > 0;
+  const [showMoveProject, setShowMoveProject] = useState(false);
 
   // ── Projects tab state ───────────────────────────────────────────────────
   const [showAddProject,   setShowAddProject]   = useState(false);
@@ -145,6 +148,12 @@ export default function WorkspaceScreen() {
   async function bulkSnooze() {
     await Promise.all([...selectedIds].map((id) => snoozeTask(id)));
     setSelectedIds(new Set());
+  }
+
+  async function bulkMoveToProject(projectId: string | null) {
+    await Promise.all([...selectedIds].map((id) => saveEdit({ id, projectId: projectId ?? undefined })));
+    setSelectedIds(new Set());
+    setShowMoveProject(false);
   }
 
   // ─── Projects handlers ────────────────────────────────────────────────────
@@ -269,6 +278,13 @@ export default function WorkspaceScreen() {
                     <Ionicons name={icon as any} size={16} color={viewMode === mode ? COLORS.primary : COLORS.textMuted} />
                   </TouchableOpacity>
                 ))}
+                <TouchableOpacity
+                  style={s.viewToggleBtn}
+                  onPress={() => router.push('/(tabs)/dependencygraph' as never)}
+                  hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
+                >
+                  <Ionicons name="git-branch-outline" size={16} color={COLORS.textMuted} />
+                </TouchableOpacity>
               </View>
             )}
           </View>
@@ -434,11 +450,39 @@ export default function WorkspaceScreen() {
                 <Ionicons name="trash-outline" size={18} color={COLORS.danger} />
                 <Text style={[s.bulkBtnText, { color: COLORS.danger }]}>Delete</Text>
               </TouchableOpacity>
+              <TouchableOpacity style={s.bulkBtn} onPress={() => setShowMoveProject(true)}>
+                <Ionicons name="folder-outline" size={18} color={COLORS.warning} />
+                <Text style={[s.bulkBtnText, { color: COLORS.warning }]}>Move</Text>
+              </TouchableOpacity>
               <TouchableOpacity style={s.bulkBtn} onPress={() => setSelectedIds(new Set())}>
                 <Ionicons name="close" size={18} color={COLORS.textMuted} />
               </TouchableOpacity>
             </View>
           )}
+
+          {/* Move to Project picker */}
+          <Modal visible={showMoveProject} transparent animationType="slide" onRequestClose={() => setShowMoveProject(false)}>
+            <View style={s.modalOverlay}>
+              <View style={s.moveSheet}>
+                <View style={s.moveHeader}>
+                  <Text style={s.moveTitle}>Move to Project</Text>
+                  <TouchableOpacity onPress={() => setShowMoveProject(false)}>
+                    <Ionicons name="close" size={22} color={COLORS.textSub} />
+                  </TouchableOpacity>
+                </View>
+                <TouchableOpacity style={s.moveProjRow} onPress={() => bulkMoveToProject(null)}>
+                  <Ionicons name="remove-circle-outline" size={20} color={COLORS.textMuted} />
+                  <Text style={s.moveProjName}>No Project</Text>
+                </TouchableOpacity>
+                {projects.map((proj) => (
+                  <TouchableOpacity key={proj.id} style={s.moveProjRow} onPress={() => bulkMoveToProject(proj.id)}>
+                    <View style={[s.moveProjDot, { backgroundColor: proj.color }]} />
+                    <Text style={s.moveProjName}>{proj.name}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          </Modal>
         </>
       )}
 
@@ -781,6 +825,15 @@ const s = StyleSheet.create({
   bulkCount: { flex: 1, fontWeight: '700', fontSize: 13, color: COLORS.text },
   bulkBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 4 },
   bulkBtnText: { fontSize: 13, fontWeight: '600' },
+
+  // Move to project modal
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
+  moveSheet:  { backgroundColor: COLORS.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 36 },
+  moveHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
+  moveTitle:  { fontSize: 17, fontWeight: '700', color: COLORS.text },
+  moveProjRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: COLORS.cardAlt },
+  moveProjDot: { width: 12, height: 12, borderRadius: 6 },
+  moveProjName:{ fontSize: 15, color: COLORS.text, fontWeight: '500' },
 
   // Sort chips
   sortChip: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 14, borderWidth: 1, borderColor: COLORS.surfaceBorder, backgroundColor: COLORS.cardAlt, marginRight: 6 },

@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import { ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -155,6 +156,7 @@ function CalendarView({ tasks }: { tasks: Task[] }) {
 export default function HistoryScreen() {
   const { tasks, loadAll } = useTaskStore();
   const [tab, setTab] = useState<'stats' | 'calendar'>('stats');
+  const router = useRouter();
 
   useEffect(() => { loadAll(); }, []);
 
@@ -234,7 +236,35 @@ export default function HistoryScreen() {
         <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
         <ScrollView style={s.scroll} contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
 
-          <Text style={s.title}>History</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+            <Text style={s.title}>History</Text>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <TouchableOpacity
+                style={s.reviewBtn}
+                onPress={() => router.push('/(tabs)/focusstats' as never)}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="timer-outline" size={15} color={COLORS.primary} />
+                <Text style={s.reviewBtnText}>Focus Stats</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={s.reviewBtn}
+                onPress={() => router.push('/(tabs)/weeklyreview')}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="calendar-outline" size={15} color={COLORS.primary} />
+                <Text style={s.reviewBtnText}>Weekly Review</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={s.reviewBtn}
+                onPress={() => router.push('/(tabs)/moodlog' as never)}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="happy-outline" size={15} color={COLORS.primary} />
+                <Text style={s.reviewBtnText}>Mood Log</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
 
           {/* Segment control */}
           <View style={s.segWrap}>
@@ -397,7 +427,13 @@ const s = StyleSheet.create({
   safe:    { flex: 1 },
   scroll:  { flex: 1 },
   content: { paddingHorizontal: 20, paddingTop: 8 },
-  title:   { fontSize: 28, fontWeight: '800', color: COLORS.text, letterSpacing: -0.5, marginBottom: 16 },
+  title:   { fontSize: 28, fontWeight: '800', color: COLORS.text, letterSpacing: -0.5, marginBottom: 0 },
+  reviewBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: COLORS.primaryLight, borderRadius: 20,
+    paddingHorizontal: 12, paddingVertical: 7,
+  },
+  reviewBtnText: { fontSize: 13, fontWeight: '700', color: COLORS.primary },
   subtitle:{ fontSize: 14, color: COLORS.textSub, marginBottom: 20 },
 
   // Segment control

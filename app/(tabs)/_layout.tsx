@@ -11,6 +11,7 @@ type IoniconName = keyof typeof Ionicons.glyphMap;
 const TABS = [
   { name: 'index',     title: 'Home',      icon: 'home'              as IoniconName },
   { name: 'tasks',     title: 'Tasks',     icon: 'checkmark-circle'  as IoniconName },
+  { name: 'habits',    title: 'Habits',    icon: 'repeat'            as IoniconName },
   { name: 'notes',     title: 'Notes',     icon: 'document-text'     as IoniconName },
   { name: 'assistant', title: 'Assistant', icon: 'mic'               as IoniconName },
 ];
@@ -74,8 +75,14 @@ export default function TabLayout() {
       ))}
       {/* Screens accessible via navigation but not shown in tab bar */}
       <Tabs.Screen name="history"       options={{ href: null }} />
+      <Tabs.Screen name="weeklyreview"  options={{ href: null }} />
       <Tabs.Screen name="projects"      options={{ href: null }} />
       <Tabs.Screen name="calendar"      options={{ href: null }} />
+      <Tabs.Screen name="dayplanner"    options={{ href: null }} />
+      <Tabs.Screen name="dependencygraph" options={{ href: null }} />
+      <Tabs.Screen name="templates"       options={{ href: null }} />
+      <Tabs.Screen name="focusstats"      options={{ href: null }} />
+      <Tabs.Screen name="moodlog"         options={{ href: null }} />
       <Tabs.Screen name="communication" options={{ href: null }} />
       <Tabs.Screen name="settings"  options={{ title: 'Settings' }} />
     </Tabs>

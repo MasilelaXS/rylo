@@ -130,6 +130,33 @@ _db.execSync(`CREATE TABLE IF NOT EXISTS category_streaks (
   last_completion_date TEXT DEFAULT ''
 )`);
 
+_db.execSync(`CREATE TABLE IF NOT EXISTS habits (
+  id TEXT PRIMARY KEY NOT NULL,
+  name TEXT NOT NULL,
+  icon TEXT DEFAULT 'checkmark-circle-outline',
+  color TEXT DEFAULT '#1E90FF',
+  frequency TEXT DEFAULT 'daily',
+  target_days TEXT DEFAULT '',
+  created_at INTEGER NOT NULL,
+  archived INTEGER DEFAULT 0
+)`);
+
+_db.execSync(`CREATE TABLE IF NOT EXISTS habit_completions (
+  id TEXT PRIMARY KEY NOT NULL,
+  habit_id TEXT NOT NULL,
+  completed_date TEXT NOT NULL,
+  created_at INTEGER NOT NULL
+)`);
+
+_db.execSync(`CREATE TABLE IF NOT EXISTS mood_logs (
+  id TEXT PRIMARY KEY NOT NULL,
+  log_date TEXT NOT NULL,
+  energy INTEGER NOT NULL,
+  mood INTEGER NOT NULL,
+  note TEXT DEFAULT '',
+  created_at INTEGER NOT NULL
+)`);
+
 // ─── Migration version tracking ────────────────────────────────────────────
 _db.execSync(`CREATE TABLE IF NOT EXISTS schema_versions (
   version INTEGER PRIMARY KEY NOT NULL,
@@ -137,7 +164,7 @@ _db.execSync(`CREATE TABLE IF NOT EXISTS schema_versions (
 )`);
 
 // Record current schema version
-const currentVersion = 3;
+const currentVersion = 5;
 const versionRow = _db.getFirstSync<{ version: number } | null>(
   'SELECT version FROM schema_versions ORDER BY version DESC LIMIT 1'
 );

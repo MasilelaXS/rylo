@@ -195,3 +195,34 @@ export interface TaskExt {
   commStatus?: 'pending' | 'attempted' | 'confirmed';
   difficulty?: 1 | 2 | 3 | 4 | 5;
 }
+
+// ─── Habit Types ─────────────────────────────────────────────────────────────
+export type HabitFrequency = 'daily' | 'weekly';
+
+export interface Habit {
+  id: string;
+  name: string;
+  icon: string;
+  color: string;
+  frequency: HabitFrequency;
+  targetDays: number[]; // 0-6 (Sun=0) used for weekly habits; empty = every day
+  createdAt: number;
+  archived: boolean;
+}
+
+export interface HabitCompletion {
+  id: string;
+  habitId: string;
+  completedDate: string; // YYYY-MM-DD
+  createdAt: number;
+}
+
+// ─── Mood/Energy Types ────────────────────────────────────────────────────────
+export interface MoodLog {
+  id: string;
+  logDate: string;     // YYYY-MM-DD
+  energy: number;      // 1-5
+  mood: number;        // 1-5
+  note: string;
+  createdAt: number;
+}

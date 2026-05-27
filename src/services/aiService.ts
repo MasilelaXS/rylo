@@ -152,7 +152,48 @@ export async function parseDueDateHint(title: string): Promise<number | null> {
   return null;
 }
 
-// ─── Chat assistant ───────────────────────────────────────────────────────────
+// ─── Weekly review generation ────────────────────────────────────────────────────
+export interface WeeklyReviewData {
+  weekRange: string;
+  completed: number;
+  total: number;
+  completionRate: number;      // 0–100
+  mostAvoidedCategory?: string;
+  avoidanceRate?: number;      // 0–1
+  topCategory?: string;
+  habits: { name: string; doneThisWeek: number }[];
+  streak: number;
+  userName?: string;
+}
+
+export async function generateWeeklyReview(data: WeeklyReviewData): Promise<string> {
+  const habitSummary = data.habits.length > 0
+    ? data.habits.map((h) => `${h.name}: ${h.doneThisWeek}/7 days`).join(', ')
+    : 'No habits tracked';
+
+  const lines = [
+    `Week: ${data.weekRange}`,
+    `Tasks: ${data.completed} completed out of ${data.total} (${data.completionRate}% rate)`,
+    data.mostAvoidedCategory
+      ? `Most avoided category: ${data.mostAvoidedCategory} (${Math.round((data.avoidanceRate ?? 0) * 100)}% avoided)`
+      : '',
+    data.topCategory ? `Best performing category: ${data.topCategory}` : '',
+    `Current streak: ${data.streak} days`,
+    `Habits this week: ${habitSummary}`,
+  ].filter(Boolean);
+
+  return callGroq(
+    `You are a no-nonsense productivity coach doing a weekly review. Based on the data, write a concise honest assessment in exactly 3 short paragraphs:
+1. What they achieved and what it means
+2. A specific pattern or problem you noticed
+3. One concrete action to improve next week
+
+Be direct. Be honest. No fluff. No bullet points. Use "you" not "the user". Max 130 words total.`,
+    lines.join('\n'),
+  );
+}
+
+// ─── Chat assistant ─────────────────────────────────────────────────────────────────
 export async function chatWithAssistant(
   messages: { role: 'user' | 'assistant'; content: string }[],
   taskContext: string

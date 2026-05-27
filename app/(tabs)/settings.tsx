@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import * as Speech from 'expo-speech';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Platform, ScrollView, Share, StatusBar, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
@@ -42,6 +43,7 @@ function SettingRow({ label, sublabel, right }: { label: string; sublabel?: stri
 }
 
 export default function SettingsScreen() {
+  const router   = useRouter();
   const { settings, update } = useSettingsStore();
   const { tasks } = useTaskStore();
   const { notes } = useNoteStore();
@@ -398,6 +400,25 @@ export default function SettingsScreen() {
                 </View>
               </React.Fragment>
             ))}
+          </View>
+
+          {/* ── Tools ────────────────────────────────────────────── */}
+          <Text style={s.sectionLabel}>Tools</Text>
+          <View style={s.group}>
+            <TouchableOpacity style={s.row} onPress={() => router.push('/(tabs)/templates' as never)}>
+              <Text style={s.rowLabel}>Task Templates</Text>
+              <Ionicons name="copy-outline" size={18} color={COLORS.primary} />
+            </TouchableOpacity>
+            <Divider />
+            <TouchableOpacity style={s.row} onPress={() => router.push('/(tabs)/dependencygraph' as never)}>
+              <Text style={s.rowLabel}>Dependency Graph</Text>
+              <Ionicons name="git-branch-outline" size={18} color={COLORS.primary} />
+            </TouchableOpacity>
+            <Divider />
+            <TouchableOpacity style={s.row} onPress={() => router.push('/(tabs)/dayplanner' as never)}>
+              <Text style={s.rowLabel}>Day Planner</Text>
+              <Ionicons name="time-outline" size={18} color={COLORS.primary} />
+            </TouchableOpacity>
           </View>
 
           {/* ── Actions ───────────────────────────────────────────── */}

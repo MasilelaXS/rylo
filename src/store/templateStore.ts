@@ -21,6 +21,7 @@ interface TemplateStore {
   loaded: boolean;
   load: () => Promise<void>;
   addTemplate: (t: Omit<TaskTemplate, 'id'>) => Promise<void>;
+  updateTemplate: (id: string, partial: Partial<Omit<TaskTemplate, 'id'>>) => Promise<void>;
   removeTemplate: (id: string) => Promise<void>;
 }
 
@@ -53,6 +54,12 @@ export const useTemplateStore = create<TemplateStore>((set, get) => ({
   addTemplate: async (t) => {
     const tpl: TaskTemplate = { ...t, id: generateId() };
     const next = [...get().templates, tpl];
+    await AsyncStorage.setItem(TEMPLATES_KEY, JSON.stringify(next)).catch(() => {});
+    set({ templates: next });
+  },
+
+  updateTemplate: async (id, partial) => {
+    const next = get().templates.map((t) => t.id === id ? { ...t, ...partial } : t);
     await AsyncStorage.setItem(TEMPLATES_KEY, JSON.stringify(next)).catch(() => {});
     set({ templates: next });
   },
