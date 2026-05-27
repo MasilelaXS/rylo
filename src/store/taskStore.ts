@@ -58,6 +58,7 @@ interface TaskStore {
   getWeeklyBars: () => WeeklyBar[];
   getAvoidanceTasks: () => Task[];   // tasks with snoozeCount >= 3 or severely overdue
   getEstimatedMinutesToday: () => number;
+  logTime: (id: string, minutes: number) => Promise<void>;
 }
 
 export { WeeklyBar };
@@ -279,5 +280,12 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     return tasks
       .filter((t) => t.dueDate >= start && t.dueDate <= end && t.status !== 'completed')
       .reduce((acc, t) => acc + (t.estimatedMinutes ?? 0), 0);
+  },
+
+  logTime: async (id, minutes) => {
+    const task = get().tasks.find((t) => t.id === id);
+    if (!task) return;
+    await updateTask({ id, timeLoggedMinutes: (task.timeLoggedMinutes ?? 0) + minutes });
+    await get().loadAll();
   },
 }));

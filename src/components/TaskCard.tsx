@@ -3,6 +3,7 @@ import * as Haptics from 'expo-haptics';
 import { memo, useCallback, useRef, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
+import { useTaskStore } from '../store/taskStore';
 import type { Task } from '../types';
 import { CARD_SHADOW_SM, COLORS, PRIORITY_CONFIG } from '../utils/constants';
 import FocusTimer from './FocusTimer';
@@ -13,6 +14,8 @@ interface Props {
   onComplete: (id: string) => void;
   onSnooze: (id: string) => void;
   onPress: (task: Task) => void;
+  // Optionally pass the full task list so we can show the blocker title
+  allTasks?: Task[];
 }
 
 const REPEAT_LABELS: Record<string, string> = {
@@ -29,13 +32,20 @@ function formatMinutes(m: number): string {
   return rem ? `${h}h ${rem}m` : `${h}h`;
 }
 
-function TaskCard({ task, onComplete, onSnooze, onPress }: Props) {
+function TaskCard({ task, onComplete, onSnooze, onPress, allTasks }: Props) {
   const swipeRef = useRef<Swipeable>(null);
   const didTrigger = useRef(false);
   const priority = PRIORITY_CONFIG[task.priority];
   const isOverdue = task.dueDate < Date.now() && task.status !== 'completed';
   const isDone = task.status === 'completed';
   const [timerVisible, setTimerVisible] = useState(false);
+  const { logTime } = useTaskStore();
+
+  // Dependency: find the task that blocks this one
+  const blockerTask = task.dependsOn
+    ? (allTasks ?? []).find((t) => t.id === task.dependsOn)
+    : null;
+  const isBlocked = !!blockerTask && blockerTask.status !== 'completed';
 
   const dueDate = new Date(task.dueDate);
   const isToday = dueDate.toDateString() === new Date().toDateString();
@@ -86,7 +96,10 @@ function TaskCard({ task, onComplete, onSnooze, onPress }: Props) {
       <View style={s.body}>
         {/* Title + priority pill */}
         <View style={s.titleRow}>
-          <Text style={[s.title, isDone && s.titleDone]} numberOfLines={1}>
+          {isBlocked && (
+            <Ionicons name="lock-closed" size={12} color={COLORS.textMuted} />
+          )}
+          <Text style={[s.title, isDone && s.titleDone, isBlocked && s.titleBlocked]} numberOfLines={1}>
             {task.title}
           </Text>
           {!isDone && (
@@ -139,6 +152,24 @@ function TaskCard({ task, onComplete, onSnooze, onPress }: Props) {
                 <Text style={s.repeatText}>{REPEAT_LABELS[task.repeatType]}</Text>
               </View>
             )}
+
+            {/* Blocked-by badge */}
+            {isBlocked && (
+              <View style={s.blockedPill}>
+                <Ionicons name="lock-closed" size={9} color={COLORS.textMuted} />
+                <Text style={s.blockedText} numberOfLines={1}>
+                  Blocked{blockerTask ? ` by: ${blockerTask.title}` : ''}
+                </Text>
+              </View>
+            )}
+
+            {/* Time logged badge */}
+            {!!task.timeLoggedMinutes && (
+              <View style={s.timePill}>
+                <Ionicons name="timer-outline" size={9} color={COLORS.primary} />
+                <Text style={s.timeText}>{formatMinutes(task.timeLoggedMinutes)} logged</Text>
+              </View>
+            )}
           </View>
 
           {!isDone && (
@@ -183,6 +214,7 @@ function TaskCard({ task, onComplete, onSnooze, onPress }: Props) {
         onClose={() => setTimerVisible(false)}
         taskTitle={task.title}
         estimatedMinutes={task.estimatedMinutes}
+        onSessionComplete={(mins) => logTime(task.id, mins)}
       />
       <Swipeable
         ref={swipeRef}
@@ -240,6 +272,21 @@ const s = StyleSheet.create({
     paddingHorizontal: 5, paddingVertical: 1,
   },
   repeatText: { color: COLORS.primary, fontSize: 10, fontWeight: '600' },
+  blockedPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 2,
+    backgroundColor: COLORS.cardAlt, borderRadius: 6,
+    paddingHorizontal: 5, paddingVertical: 1,
+    borderWidth: 1, borderColor: COLORS.surfaceBorder,
+    maxWidth: 140,
+  },
+  blockedText: { color: COLORS.textMuted, fontSize: 10, fontWeight: '500', flex: 1 },
+  timePill: {
+    flexDirection: 'row', alignItems: 'center', gap: 2,
+    backgroundColor: COLORS.primaryLight, borderRadius: 6,
+    paddingHorizontal: 5, paddingVertical: 1,
+  },
+  timeText: { color: COLORS.primary, fontSize: 10, fontWeight: '600' },
+  titleBlocked: { color: COLORS.textSub },
   actions: { flexDirection: 'row', gap: 6 },
   actionBtn: {
     width: 30, height: 30, borderRadius: 15,

@@ -14,8 +14,11 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AddTaskModal from '../../src/components/AddTaskModal';
 import EmptyState from '../../src/components/EmptyState';
+import KanbanBoard from '../../src/components/KanbanBoard';
 import ProjectCard from '../../src/components/ProjectCard';
 import TaskCard from '../../src/components/TaskCard';
+import TimelineView from '../../src/components/TimelineView';
+import WorkloadBanner from '../../src/components/WorkloadBanner';
 import { scheduleHourlyReminders, scheduleTaskReminder } from '../../src/notifications/notificationService';
 import { useProjectStore } from '../../src/store/projectStore';
 import { useTaskStore } from '../../src/store/taskStore';
@@ -23,6 +26,7 @@ import type { Project, Task } from '../../src/types';
 import { ACCENT, CARD_SHADOW, CARD_SHADOW_SM, COLORS, PRIORITY_CONFIG, generateId } from '../../src/utils/constants';
 
 // ─── Shared helpers ───────────────────────────────────────────────────────────
+type ViewMode  = 'list' | 'board' | 'timeline';
 type InnerTab  = 'tasks' | 'projects' | 'calendar';
 type FilterKey = 'all' | 'today' | 'upcoming' | 'overdue' | 'done';
 
@@ -75,6 +79,7 @@ export default function WorkspaceScreen() {
 
   // ── Tasks tab state ──────────────────────────────────────────────────────
   const [filter, setFilter] = useState<FilterKey>('all');
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [search, setSearch] = useState('');
   const [sortKey, setSortKey] = useState<'due' | 'priority' | 'created' | 'title' | 'duration'>('due');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -253,11 +258,17 @@ export default function WorkspaceScreen() {
               </TouchableOpacity>
             )}
             {activeTab === 'tasks' && (
-              <View style={s.headerSubtitle}>
-                <Text style={s.subtitleText}>
-                  {tasks.filter(t => t.status !== 'cancelled' && t.status !== 'completed').length} active
-                  {overdueTasks.length > 0 ? ` · ${overdueTasks.length} overdue` : ''}
-                </Text>
+              <View style={s.viewToggle}>
+                {([['list', 'list-outline'], ['board', 'grid-outline'], ['timeline', 'bar-chart-outline']] as [ViewMode, string][]).map(([mode, icon]) => (
+                  <TouchableOpacity
+                    key={mode}
+                    style={[s.viewToggleBtn, viewMode === mode && s.viewToggleBtnActive]}
+                    onPress={() => setViewMode(mode)}
+                    hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
+                  >
+                    <Ionicons name={icon as any} size={16} color={viewMode === mode ? COLORS.primary : COLORS.textMuted} />
+                  </TouchableOpacity>
+                ))}
               </View>
             )}
           </View>
@@ -305,6 +316,29 @@ export default function WorkspaceScreen() {
             )}
           </View>
 
+          {viewMode !== 'timeline' && (
+            <WorkloadBanner tasks={filtered} style={s.workloadBanner} />
+          )}
+
+          {viewMode === 'board' && (
+            <View style={s.boardWrap}>
+              <KanbanBoard
+                tasks={filtered}
+                onPress={(task) => setEditingTask(task)}
+                onComplete={handleComplete}
+                onStatusChange={(id, status) => saveEdit({ id, status })}
+              />
+            </View>
+          )}
+
+          {viewMode === 'timeline' && (
+            <View style={s.timelineWrap}>
+              <TimelineView tasks={filtered} onPress={(task) => setEditingTask(task)} />
+            </View>
+          )}
+
+          {viewMode === 'list' && (
+          <>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.filterRow} style={{ flexGrow: 0 }}>
             {TASK_FILTERS.map(f => {
               const active = filter === f.key;
@@ -373,7 +407,7 @@ export default function WorkspaceScreen() {
                             <Ionicons name="checkmark-circle" size={22} color={COLORS.primary} />
                           </View>
                         )}
-                        <TaskCard task={t} onComplete={handleComplete} onSnooze={snoozeTask} onPress={task => isSelecting ? toggleSelect(task.id) : setEditingTask(task)} />
+                        <TaskCard task={t} allTasks={tasks} onComplete={handleComplete} onSnooze={snoozeTask} onPress={task => isSelecting ? toggleSelect(task.id) : setEditingTask(task)} />
                       </TouchableOpacity>
                     );
                   })}
@@ -381,6 +415,8 @@ export default function WorkspaceScreen() {
               ))
             )}
           </ScrollView>
+          </>
+          )} {/* end viewMode === 'list' */}
 
           {/* Bulk actions toolbar */}
           {isSelecting && (
@@ -752,6 +788,18 @@ const s = StyleSheet.create({
   sortChipText: { fontSize: 12, color: COLORS.textSub, fontWeight: '500' },
   sortChipTextActive: { color: COLORS.primary, fontWeight: '700' },
   fabGrad: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center' },
+
+  // View mode toggle
+  viewToggle: { flexDirection: 'row', gap: 4, backgroundColor: COLORS.cardAlt, borderRadius: 12, padding: 3 },
+  viewToggleBtn: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  viewToggleBtnActive: { backgroundColor: COLORS.card, ...CARD_SHADOW_SM },
+
+  // Workload banner
+  workloadBanner: { marginTop: 2 },
+
+  // Board & timeline wrappers
+  boardWrap: { flex: 1, paddingTop: 8 },
+  timelineWrap: { flex: 1, paddingTop: 6 },
 
   // Add project modal
   modalOverlay: { flex: 1, backgroundColor: 'rgba(26,29,46,0.5)', justifyContent: 'flex-end' },

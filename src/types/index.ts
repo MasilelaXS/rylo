@@ -28,6 +28,8 @@ export interface Task {
   category?: 'communication' | 'deep_work' | 'admin' | 'personal' | 'general';
   commStatus?: 'pending' | 'attempted' | 'confirmed';
   difficulty?: 1 | 2 | 3 | 4 | 5;
+  dependsOn?: string | null;           // ID of the task that blocks this one
+  timeLoggedMinutes?: number;          // cumulative focus time logged (minutes)
 }
 
 export interface Project {

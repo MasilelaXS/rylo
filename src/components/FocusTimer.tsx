@@ -23,13 +23,14 @@ interface Props {
   onClose: () => void;
   taskTitle?: string;
   estimatedMinutes?: number;
+  onSessionComplete?: (minutes: number) => void;
 }
 
 type Phase = 'work' | 'break' | 'longBreak';
 
 function pad(n: number) { return String(n).padStart(2, '0'); }
 
-export default function FocusTimer({ visible, onClose, taskTitle, estimatedMinutes }: Props) {
+export default function FocusTimer({ visible, onClose, taskTitle, estimatedMinutes, onSessionComplete }: Props) {
   const workMins   = estimatedMinutes && estimatedMinutes > 0 ? Math.min(estimatedMinutes, 60) : WORK_MINUTES;
   const totalSecs  = (phase: Phase) => {
     if (phase === 'work')      return workMins * 60;
@@ -89,6 +90,9 @@ export default function FocusTimer({ visible, onClose, taskTitle, estimatedMinut
               return nextSessionsLocal;
             });
             notifyDone(p);
+            if (p === 'work' && onSessionComplete) {
+              onSessionComplete(workMins);
+            }
             const next: Phase = p === 'work'
               ? (nextSessionsLocal % 4 === 0 ? 'longBreak' : 'break')
               : 'work';

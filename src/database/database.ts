@@ -58,6 +58,8 @@ try { _db.execSync(`ALTER TABLE tasks ADD COLUMN committed INTEGER DEFAULT 0`); 
 try { _db.execSync(`ALTER TABLE tasks ADD COLUMN category TEXT DEFAULT 'general'`); } catch {}
 try { _db.execSync(`ALTER TABLE tasks ADD COLUMN comm_status TEXT`); } catch {}
 try { _db.execSync(`ALTER TABLE tasks ADD COLUMN difficulty INTEGER DEFAULT 0`); } catch {}
+try { _db.execSync(`ALTER TABLE tasks ADD COLUMN depends_on TEXT`); } catch {}
+try { _db.execSync(`ALTER TABLE tasks ADD COLUMN time_logged_minutes INTEGER DEFAULT 0`); } catch {}
 
 _db.execSync(`CREATE TABLE IF NOT EXISTS notes (
   id TEXT PRIMARY KEY NOT NULL,

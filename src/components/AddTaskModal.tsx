@@ -78,6 +78,9 @@ export default function AddTaskModal({ visible, onClose, onSave, projects, initi
   const [voiceEnabled, setVoiceEnabled] = useState(true);
   const [repeatType, setRepeatType] = useState<RepeatType>('none');
   const [estimatedMinutes, setEstimatedMinutes] = useState(0);
+  const [dependsOn, setDependsOn] = useState<string | null>(null);
+  const [showBlockerPicker, setShowBlockerPicker] = useState(false);
+  const [blockerSearch, setBlockerSearch] = useState('');
   const [hour, setHour] = useState(initDue.getHours());
   const [minute, setMinute] = useState(MINUTE_STEPS.includes(initDue.getMinutes()) ? initDue.getMinutes() : 0);
   const [dayIndex, setDayIndex] = useState(0);
@@ -90,6 +93,7 @@ export default function AddTaskModal({ visible, onClose, onSave, projects, initi
   const dueDateDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { todayTasks } = useTaskStore();
+  const { tasks: allTasks } = useTaskStore();
 
   // Debounced due-date hint from title
   function handleTitleChange(text: string) {
@@ -167,6 +171,7 @@ export default function AddTaskModal({ visible, onClose, onSave, projects, initi
       setMinute(nearestMin);
       setRepeatType(initialTask.repeatType ?? 'none');
       setEstimatedMinutes(initialTask.estimatedMinutes ?? 0);
+      setDependsOn(initialTask.dependsOn ?? null);
       // Find day index
       const today = new Date(); today.setHours(0, 0, 0, 0);
       const taskDay = new Date(d); taskDay.setHours(0, 0, 0, 0);
@@ -176,7 +181,7 @@ export default function AddTaskModal({ visible, onClose, onSave, projects, initi
       const d = initialDate ?? (() => { const x = new Date(); x.setHours(x.getHours() + 1, 0, 0, 0); return x; })();
       setTitle(''); setDescription(''); setLocation('');
       setPriority('medium'); setProjectId(null); setVoiceEnabled(true);
-      setRepeatType('none'); setEstimatedMinutes(0);
+      setRepeatType('none'); setEstimatedMinutes(0); setDependsOn(null);
       setHour(d.getHours()); setMinute(0);
       // Find matching day index
       const today = new Date(); today.setHours(0, 0, 0, 0);
@@ -218,6 +223,7 @@ export default function AddTaskModal({ visible, onClose, onSave, projects, initi
       estimatedMinutes,
       voiceReminderEnabled: voiceEnabled,
       communicationTarget: isEdit ? initialTask!.communicationTarget : null,
+      dependsOn,
     });
     onClose();
   };
@@ -483,6 +489,70 @@ export default function AddTaskModal({ visible, onClose, onSave, projects, initi
               </>
             )}
 
+            {/* Blocked by (dependency) */}
+            <Text style={s.label}>Blocked by</Text>
+            {!showBlockerPicker ? (
+              <TouchableOpacity
+                style={[s.input, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}
+                onPress={() => setShowBlockerPicker(true)}
+                activeOpacity={0.75}
+              >
+                <Text style={{ color: dependsOn ? COLORS.text : COLORS.textMuted, fontSize: 15 }}>
+                  {dependsOn
+                    ? (allTasks.find((t) => t.id === dependsOn)?.title ?? 'Unknown task')
+                    : 'None — tap to select'}
+                </Text>
+                {dependsOn ? (
+                  <TouchableOpacity onPress={() => setDependsOn(null)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                    <Ionicons name="close-circle" size={18} color={COLORS.textMuted} />
+                  </TouchableOpacity>
+                ) : (
+                  <Ionicons name="chevron-down" size={16} color={COLORS.textMuted} />
+                )}
+              </TouchableOpacity>
+            ) : (
+              <View style={s.blockerPicker}>
+                <TextInput
+                  style={[s.input, { marginBottom: 8 }]}
+                  placeholder="Search tasks…"
+                  placeholderTextColor={COLORS.textMuted}
+                  value={blockerSearch}
+                  onChangeText={setBlockerSearch}
+                  autoFocus
+                />
+                <ScrollView style={{ maxHeight: 180 }} keyboardShouldPersistTaps="handled">
+                  <TouchableOpacity
+                    style={s.blockerItem}
+                    onPress={() => { setDependsOn(null); setShowBlockerPicker(false); setBlockerSearch(''); }}
+                  >
+                    <Ionicons name="remove-circle-outline" size={16} color={COLORS.textMuted} />
+                    <Text style={[s.blockerItemText, { color: COLORS.textMuted }]}>None (remove blocker)</Text>
+                  </TouchableOpacity>
+                  {allTasks
+                    .filter((t) =>
+                      t.id !== initialTask?.id &&
+                      t.status !== 'completed' &&
+                      t.status !== 'cancelled' &&
+                      (!blockerSearch.trim() || t.title.toLowerCase().includes(blockerSearch.toLowerCase()))
+                    )
+                    .slice(0, 20)
+                    .map((t) => (
+                      <TouchableOpacity
+                        key={t.id}
+                        style={[s.blockerItem, dependsOn === t.id && s.blockerItemActive]}
+                        onPress={() => { setDependsOn(t.id); setShowBlockerPicker(false); setBlockerSearch(''); }}
+                      >
+                        <Ionicons name="lock-closed-outline" size={14} color={COLORS.primary} />
+                        <Text style={s.blockerItemText} numberOfLines={1}>{t.title}</Text>
+                      </TouchableOpacity>
+                    ))}
+                </ScrollView>
+                <TouchableOpacity style={s.blockerCancel} onPress={() => { setShowBlockerPicker(false); setBlockerSearch(''); }}>
+                  <Text style={{ color: COLORS.textMuted, fontSize: 13 }}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
             {/* Voice reminder toggle */}
             <View style={s.toggleRow}>
               <Ionicons name="mic-outline" size={18} color={COLORS.textSub} />
@@ -652,4 +722,10 @@ const s = StyleSheet.create({
   saveBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
   deleteBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 12, padding: 10 },
   deleteBtnText: { color: COLORS.danger, fontSize: 15, fontWeight: '600' },
+  // Blocker picker
+  blockerPicker: { backgroundColor: COLORS.cardAlt, borderRadius: 14, padding: 12, marginBottom: 12, borderWidth: 1, borderColor: COLORS.surfaceBorder },
+  blockerItem: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10, paddingHorizontal: 8, borderRadius: 10 },
+  blockerItemActive: { backgroundColor: COLORS.primaryLight },
+  blockerItemText: { flex: 1, fontSize: 14, color: COLORS.text },
+  blockerCancel: { alignItems: 'center', paddingTop: 8 },
 });
