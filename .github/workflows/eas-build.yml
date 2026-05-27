@@ -1,0 +1,51 @@
+name: EAS Build
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: 'Build profile'
+        required: true
+        default: 'preview'
+        type: choice
+        options:
+          - development
+          - preview
+          - production
+
+jobs:
+  build:
+    name: EAS Build (${{ github.event.inputs.profile || 'preview' }})
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # ── Write .env from GitHub Secrets ──────────────────────────────────
+      # The actual key values live in GitHub → Settings → Secrets → Actions.
+      # They are NEVER stored in the repository.
+      - name: Create .env file
+        run: |
+          echo "EXPO_PUBLIC_GROQ_API_KEY=${{ secrets.EXPO_PUBLIC_GROQ_API_KEY }}" >> .env
+          echo "EXPO_PUBLIC_PEXELS_API_KEY=${{ secrets.EXPO_PUBLIC_PEXELS_API_KEY }}" >> .env
+
+      - name: Setup EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Build with EAS
+        run: eas build --platform android --profile ${{ github.event.inputs.profile || 'preview' }} --non-interactive
