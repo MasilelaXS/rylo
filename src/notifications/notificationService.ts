@@ -49,6 +49,21 @@ export async function requestNotificationPermission(): Promise<boolean> {
       sound: 'default',
       bypassDnd: true,
     });
+    await Notifications.setNotificationChannelAsync('hourly', {
+      name: 'Hourly Reminders',
+      importance: Notifications.AndroidImportance.DEFAULT,
+      vibrationPattern: [0, 200],
+      lightColor: '#1E90FF',
+      sound: 'default',
+    });
+    await Notifications.setNotificationChannelAsync('due-tasks', {
+      name: 'Task Due Alerts',
+      importance: Notifications.AndroidImportance.MAX,
+      vibrationPattern: [0, 400, 200, 400, 200, 800],
+      lightColor: '#FF4444',
+      sound: 'default',
+      bypassDnd: true,
+    });
   }
 
   const { status: existing } = await Notifications.getPermissionsAsync();
@@ -58,29 +73,45 @@ export async function requestNotificationPermission(): Promise<boolean> {
   return status === 'granted';
 }
 
-// ─── Schedule a task reminder ────────────────────────────────────────────────
-export async function scheduleTaskReminder(task: Task): Promise<string | null> {
-  if (IS_EXPO_GO) return null;
-
+// ─── Schedule due-task alert with follow-up vibrations until acknowledged ─────
+export async function scheduleTaskDueAlert(task: Task): Promise<void> {
+  if (IS_EXPO_GO) return;
   const Notifications = N();
-  const triggerDate = new Date(task.dueDate);
-  if (triggerDate.getTime() <= Date.now()) return null;
+  if (task.dueDate <= Date.now()) return;
 
-  const id = await Notifications.scheduleNotificationAsync({
-    content: {
-      title: `⚡ ${task.title}`,
-      body: task.description || 'Tap to take action.',
-      data: { taskId: task.id, escalationLevel: 1 },
-      sound: 'default',
-      categoryIdentifier: 'task-reminder',
-      ...(Platform.OS === 'android' && { channelId: 'reminders', largeIcon: 'drawer' }),
-    },
-    trigger: {
-      type: Notifications.SchedulableTriggerInputTypes.DATE,
-      date: triggerDate,
-    },
-  });
-  return id;
+  const followUpBodies = [
+    task.description || 'This task is due. Mark it In Progress, Done, or Snooze.',
+    'Due 5m ago — mark In Progress, Done, or Snooze.',
+    'Due 10m ago — still awaiting your response.',
+    'Due 15m ago — please take an action.',
+    'Due 20m ago — don\'t let this slip.',
+    'Due 25m ago — final reminder.',
+  ];
+
+  for (let i = 0; i <= 5; i++) {
+    const triggerMs = task.dueDate + i * 5 * 60 * 1000;
+    if (triggerMs <= Date.now()) continue;
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: i === 0 ? `⏰ Due now: ${task.title}` : `⏰ Still pending: ${task.title}`,
+        body: followUpBodies[i],
+        data: { taskId: task.id, type: 'task-due', repeatIndex: i },
+        sound: 'default',
+        categoryIdentifier: 'task-reminder',
+        ...(Platform.OS === 'android' && { channelId: 'due-tasks', largeIcon: 'drawer' }),
+      },
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.DATE,
+        date: new Date(triggerMs),
+      },
+    });
+  }
+}
+
+// Backward-compat alias used by tasks.tsx, calendar.tsx, templates.tsx, etc.
+export async function scheduleTaskReminder(task: Task): Promise<string | null> {
+  await scheduleTaskDueAlert(task);
+  return null;
 }
 
 // ─── Schedule escalation notification ────────────────────────────────────────
@@ -285,8 +316,13 @@ export async function registerNotificationCategories(): Promise<void> {
   const Notifications = N();
   await Notifications.setNotificationCategoryAsync('task-reminder', [
     {
+      identifier: 'start',
+      buttonTitle: '▶️ In Progress',
+      options: { isDestructive: false, isAuthenticationRequired: false },
+    },
+    {
       identifier: 'complete',
-      buttonTitle: '✅ Complete',
+      buttonTitle: '✅ Done',
       options: { isDestructive: false, isAuthenticationRequired: false },
     },
     {
@@ -306,14 +342,35 @@ export function setupNotificationResponseHandler(): () => void {
     const { taskId } = response.notification.request.content.data ?? {};
     const actionId = response.actionIdentifier;
     if (!taskId) return;
+
+    // Immediately cancel any queued follow-up notifications for this task
+    await cancelTaskNotifications(taskId as string);
+
     try {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const { useTaskStore } = require('../store/taskStore') as typeof import('../store/taskStore');
       const store = useTaskStore.getState();
+
       if (actionId === 'complete') {
         await store.markComplete(taskId as string);
+      } else if (actionId === 'start') {
+        await store.editTask({ id: taskId as string, status: 'in_progress' });
       } else if (actionId === 'snooze30') {
-        await store.snoozeTask(taskId as string);
+        const snoozeUntil = Date.now() + 30 * 60 * 1000;
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const { updateTask: dbUpdateTask } = require('../database/tasks') as typeof import('../database/tasks');
+        const task = store.tasks.find((t) => t.id === taskId);
+        await dbUpdateTask({
+          id: taskId as string,
+          status: 'snoozed',
+          dueDate: snoozeUntil,
+          snoozeCount: (task?.snoozeCount ?? 0) + 1,
+        });
+        // Re-arm the repeating due alert at the new snooze time
+        if (task) {
+          await scheduleTaskDueAlert({ ...task, status: 'snoozed', dueDate: snoozeUntil });
+        }
+        await store.loadAll();
       }
     } catch { /* store not ready */ }
   });
@@ -418,7 +475,7 @@ export async function scheduleHourlyReminders(tasks: Task[]): Promise<void> {
         body,
         data: { type: 'hourly-summary' },
         sound: 'default',
-        ...(Platform.OS === 'android' && { channelId: 'reminders', largeIcon: 'drawer' }),
+        ...(Platform.OS === 'android' && { channelId: 'hourly', largeIcon: 'drawer' }),
       },
       trigger: {
         type: Notifications.SchedulableTriggerInputTypes.DATE,

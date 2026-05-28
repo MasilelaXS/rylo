@@ -110,7 +110,6 @@ function NodeCard({
         <TouchableOpacity
           style={[
             n.card,
-            { borderLeftColor: p.color },
             isDone && n.cardDone,
           ]}
           onPress={() => onEdit(task)}
@@ -168,7 +167,7 @@ const n = StyleSheet.create({
   card: {
     flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10,
     backgroundColor: COLORS.card, borderRadius: 14, padding: 12,
-    borderLeftWidth: 3, ...CARD_SHADOW_SM,
+    ...CARD_SHADOW_SM,
   },
   cardDone: { opacity: 0.6 },
   statusIcon: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
@@ -230,11 +229,11 @@ export default function DependencyGraphScreen() {
         {/* ── Stats ─────────────────────────────────────────────────── */}
         <View style={s.statsRow}>
           {[
-            { val: stats.blocking, label: 'Chains',     color: COLORS.primary, icon: 'git-branch-outline' as const },
-            { val: stats.blocked,  label: 'Blocked',    color: COLORS.warning, icon: 'lock-closed-outline' as const },
-            { val: stats.free,     label: 'Free',       color: COLORS.success, icon: 'checkmark-circle-outline' as const },
+            { val: stats.blocking, label: 'Chains',  color: COLORS.primary, bg: COLORS.primaryLight, icon: 'git-branch-outline' as const },
+            { val: stats.blocked,  label: 'Blocked', color: COLORS.warning,  bg: COLORS.warningLight,  icon: 'lock-closed-outline' as const },
+            { val: stats.free,     label: 'Free',    color: COLORS.success,  bg: COLORS.successLight,  icon: 'checkmark-circle-outline' as const },
           ].map((item) => (
-            <View key={item.label} style={[s.statCard, { borderTopColor: item.color }]}>
+            <View key={item.label} style={[s.statCard, { backgroundColor: item.bg }]}>
               <Ionicons name={item.icon} size={16} color={item.color} />
               <Text style={[s.statVal, { color: item.color }]}>{item.val}</Text>
               <Text style={s.statLabel}>{item.label}</Text>
@@ -278,7 +277,7 @@ export default function DependencyGraphScreen() {
                 return (
                   <TouchableOpacity
                     key={task.id}
-                    style={[s.freeCard, { borderLeftColor: p.color }]}
+                    style={s.freeCard}
                     onPress={() => setEditTask(task)}
                     activeOpacity={0.8}
                   >
@@ -347,8 +346,8 @@ const s = StyleSheet.create({
 
   statsRow: { flexDirection: 'row', gap: 10, paddingHorizontal: 16, marginBottom: 12 },
   statCard: {
-    flex: 1, backgroundColor: COLORS.card, borderRadius: 14, padding: 12,
-    alignItems: 'center', gap: 4, borderTopWidth: 3, ...CARD_SHADOW_SM,
+    flex: 1, borderRadius: 14, padding: 12,
+    alignItems: 'center', gap: 4, ...CARD_SHADOW_SM,
   },
   statVal:   { fontSize: 20, fontWeight: '800', color: COLORS.text },
   statLabel: { fontSize: 11, color: COLORS.textMuted, fontWeight: '600' },
@@ -366,7 +365,7 @@ const s = StyleSheet.create({
   freeCard: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
     backgroundColor: COLORS.card, borderRadius: 14, padding: 12,
-    borderLeftWidth: 3, marginBottom: 6, ...CARD_SHADOW_SM,
+    marginBottom: 6, ...CARD_SHADOW_SM,
   },
   freeIcon:  { width: 28, height: 28, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   freeBody:  { flex: 1 },

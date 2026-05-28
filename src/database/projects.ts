@@ -8,6 +8,7 @@ function rowToProject(row: Record<string, unknown>): Project {
     description: (row.description as string) ?? '',
     color: (row.color as string) ?? '#1E90FF',
     createdAt: row.created_at as number,
+    pageContent: (row.page_content as string) ?? '',
   };
 }
 
@@ -22,8 +23,8 @@ export async function getAllProjects(): Promise<Project[]> {
 export async function insertProject(project: Project): Promise<void> {
   const db = await getDatabase();
   await db.runAsync(
-    'INSERT INTO projects (id, name, description, color, created_at) VALUES (?, ?, ?, ?, ?)',
-    [project.id, project.name, project.description, project.color, project.createdAt]
+    'INSERT INTO projects (id, name, description, color, page_content, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+    [project.id, project.name, project.description, project.color, project.pageContent ?? '', project.createdAt]
   );
 }
 
@@ -32,9 +33,10 @@ export async function updateProject(project: Partial<Project> & { id: string }):
   const sets: string[] = [];
   const values: unknown[] = [];
 
-  if (project.name !== undefined) { sets.push('name = ?'); values.push(project.name); }
-  if (project.description !== undefined) { sets.push('description = ?'); values.push(project.description); }
-  if (project.color !== undefined) { sets.push('color = ?'); values.push(project.color); }
+  if (project.name !== undefined)        { sets.push('name = ?');         values.push(project.name); }
+  if (project.description !== undefined) { sets.push('description = ?');  values.push(project.description); }
+  if (project.color !== undefined)       { sets.push('color = ?');        values.push(project.color); }
+  if (project.pageContent !== undefined) { sets.push('page_content = ?'); values.push(project.pageContent); }
 
   if (sets.length === 0) return;
   values.push(project.id);

@@ -3,16 +3,16 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import {
-    Alert,
-    Image,
-    ImageBackground,
-    Platform,
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  Image,
+  ImageBackground,
+  Platform,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AddTaskModal from '../../src/components/AddTaskModal';
@@ -213,7 +213,7 @@ export default function DashboardScreen() {
                 style={s.iconBtn}
                 onPress={() => settings.voiceEnabled && speakMorningBriefing(stats.total, stats.overdue)}
               >
-                <Ionicons name="notifications-outline" size={28} color={COLORS.text} />
+                <Ionicons name="notifications-outline" size={21} color={COLORS.text} />
               </TouchableOpacity>
               <TouchableOpacity
                 style={s.iconBtn}

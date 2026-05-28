@@ -25,6 +25,7 @@ function rowToTask(row: Record<string, unknown>): Task {
     difficulty: ((row.difficulty as number) || undefined) as Task['difficulty'],
     dependsOn: (row.depends_on as string | null) ?? null,
     timeLoggedMinutes: (row.time_logged_minutes as number) || 0,
+    linkedNoteId: (row.linked_note_id as string | null) ?? null,
   };
 }
 

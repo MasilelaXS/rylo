@@ -170,6 +170,14 @@ function TaskCard({ task, onComplete, onSnooze, onPress, allTasks }: Props) {
                 <Text style={s.timeText}>{formatMinutes(task.timeLoggedMinutes)} logged</Text>
               </View>
             )}
+
+            {/* Linked note badge */}
+            {!!task.linkedNoteId && (
+              <View style={s.notePill}>
+                <Ionicons name="document-text-outline" size={9} color={COLORS.primary} />
+                <Text style={s.noteText}>Note</Text>
+              </View>
+            )}
           </View>
 
           {!isDone && (
@@ -286,6 +294,12 @@ const s = StyleSheet.create({
     paddingHorizontal: 5, paddingVertical: 1,
   },
   timeText: { color: COLORS.primary, fontSize: 10, fontWeight: '600' },
+  notePill: {
+    flexDirection: 'row', alignItems: 'center', gap: 2,
+    backgroundColor: COLORS.primaryLight, borderRadius: 6,
+    paddingHorizontal: 5, paddingVertical: 1,
+  },
+  noteText: { color: COLORS.primary, fontSize: 10, fontWeight: '600' },
   titleBlocked: { color: COLORS.textSub },
   actions: { flexDirection: 'row', gap: 6 },
   actionBtn: {

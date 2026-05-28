@@ -163,8 +163,15 @@ _db.execSync(`CREATE TABLE IF NOT EXISTS schema_versions (
   applied_at INTEGER NOT NULL
 )`);
 
+// ─── Notes / Tasks / Projects enhancements ───────────────────────────────
+try { _db.execSync(`ALTER TABLE notes ADD COLUMN tags TEXT DEFAULT '[]'`); } catch {}
+try { _db.execSync(`ALTER TABLE notes ADD COLUMN folder TEXT DEFAULT ''`); } catch {}
+try { _db.execSync(`ALTER TABLE notes ADD COLUMN pinned INTEGER DEFAULT 0`); } catch {}
+try { _db.execSync(`ALTER TABLE tasks ADD COLUMN linked_note_id TEXT`); } catch {}
+try { _db.execSync(`ALTER TABLE projects ADD COLUMN page_content TEXT DEFAULT ''`); } catch {}
+
 // Record current schema version
-const currentVersion = 5;
+const currentVersion = 6;
 const versionRow = _db.getFirstSync<{ version: number } | null>(
   'SELECT version FROM schema_versions ORDER BY version DESC LIMIT 1'
 );

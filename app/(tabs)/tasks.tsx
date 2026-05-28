@@ -27,7 +27,7 @@ import type { Project, Task } from '../../src/types';
 import { ACCENT, CARD_SHADOW, CARD_SHADOW_SM, COLORS, PRIORITY_CONFIG, generateId } from '../../src/utils/constants';
 
 // ─── Shared helpers ───────────────────────────────────────────────────────────
-type ViewMode  = 'list' | 'board' | 'timeline';
+type ViewMode  = 'list' | 'board' | 'timeline' | 'table';
 type InnerTab  = 'tasks' | 'projects' | 'calendar';
 type FilterKey = 'all' | 'today' | 'upcoming' | 'overdue' | 'done';
 
@@ -268,7 +268,7 @@ export default function WorkspaceScreen() {
             )}
             {activeTab === 'tasks' && (
               <View style={s.viewToggle}>
-                {([['list', 'list-outline'], ['board', 'grid-outline'], ['timeline', 'bar-chart-outline']] as [ViewMode, string][]).map(([mode, icon]) => (
+                {([['list', 'list-outline'], ['board', 'grid-outline'], ['timeline', 'bar-chart-outline'], ['table', 'reorder-four-outline']] as [ViewMode, string][]).map(([mode, icon]) => (
                   <TouchableOpacity
                     key={mode}
                     style={[s.viewToggleBtn, viewMode === mode && s.viewToggleBtnActive]}
@@ -353,6 +353,64 @@ export default function WorkspaceScreen() {
             </View>
           )}
 
+          {viewMode === 'table' && (
+            <ScrollView style={s.scroll} contentContainerStyle={{ paddingBottom: fabBottom + 20 }} showsVerticalScrollIndicator={false}>
+              {/* Table header */}
+              <View style={s.tableHeader}>
+                <View style={s.tableColStatus} />
+                <Text style={[s.tableHeadCell, s.tableColTitle]}>Task</Text>
+                <Text style={[s.tableHeadCell, s.tableColDue]}>Due</Text>
+                <Text style={[s.tableHeadCell, s.tableColPri]}>Pri</Text>
+                <Text style={[s.tableHeadCell, s.tableColEst]}>Est</Text>
+              </View>
+              {filtered.map((t) => {
+                const pri = PRIORITY_CONFIG[t.priority];
+                const isDone = t.status === 'completed';
+                const isOverdue = t.dueDate < Date.now() && !isDone;
+                const due = new Date(t.dueDate);
+                const isToday = due.toDateString() === new Date().toDateString();
+                const dueLabel = isToday
+                  ? due.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+                  : due.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                const est = t.estimatedMinutes
+                  ? t.estimatedMinutes < 60
+                    ? `${t.estimatedMinutes}m`
+                    : `${Math.floor(t.estimatedMinutes / 60)}h${t.estimatedMinutes % 60 ? (t.estimatedMinutes % 60) + 'm' : ''}`
+                  : '—';
+                return (
+                  <TouchableOpacity
+                    key={t.id}
+                    style={[s.tableRow, isDone && s.tableRowDone]}
+                    onPress={() => setEditingTask(t)}
+                    activeOpacity={0.7}
+                  >
+                    <TouchableOpacity
+                      style={s.tableColStatus}
+                      onPress={() => handleComplete(t.id)}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <View style={[s.tableStatusDot, { backgroundColor: isDone ? COLORS.success : pri.color }]}>
+                        {isDone && <Ionicons name="checkmark" size={9} color="#fff" />}
+                      </View>
+                    </TouchableOpacity>
+                    <Text style={[s.tableCell, s.tableColTitle, isDone && s.tableCellDone]} numberOfLines={1}>{t.title}</Text>
+                    <Text style={[s.tableCell, s.tableColDue, isOverdue && { color: COLORS.danger }]} numberOfLines={1}>{dueLabel}</Text>
+                    <View style={[s.tablePriPill, s.tableColPri, { backgroundColor: pri.bg }]}>
+                      <Text style={[s.tablePriText, { color: pri.color }]}>{pri.label}</Text>
+                    </View>
+                    <Text style={[s.tableCell, s.tableColEst]}>{est}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+              {filtered.length === 0 && (
+                <View style={{ alignItems: 'center', paddingTop: 48 }}>
+                  <Ionicons name="checkmark-done-outline" size={40} color={COLORS.textMuted} />
+                  <Text style={{ color: COLORS.textMuted, marginTop: 10, fontSize: 14 }}>No tasks</Text>
+                </View>
+              )}
+            </ScrollView>
+          )}
+
           {viewMode === 'list' && (
           <>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.filterRow} style={{ flexGrow: 0 }}>
@@ -432,7 +490,7 @@ export default function WorkspaceScreen() {
             )}
           </ScrollView>
           </>
-          )} {/* end viewMode === 'list' */}
+          )}
 
           {/* Bulk actions toolbar */}
           {isSelecting && (
@@ -853,6 +911,22 @@ const s = StyleSheet.create({
   // Board & timeline wrappers
   boardWrap: { flex: 1, paddingTop: 8 },
   timelineWrap: { flex: 1, paddingTop: 6 },
+
+  // Table view
+  tableHeader:    { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#ECEEF4', backgroundColor: COLORS.cardAlt },
+  tableHeadCell:  { fontSize: 11, fontWeight: '700', color: COLORS.textMuted, textTransform: 'uppercase', letterSpacing: 0.4 },
+  tableRow:       { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 0, height: 48, borderBottomWidth: 1, borderBottomColor: '#F0F2F8' },
+  tableRowDone:   { opacity: 0.45 },
+  tableColStatus: { width: 28, alignItems: 'center', justifyContent: 'center' },
+  tableColTitle:  { flex: 1, paddingRight: 8 },
+  tableColDue:    { width: 72 },
+  tableColPri:    { width: 56, alignItems: 'center' },
+  tableColEst:    { width: 40, textAlign: 'right' },
+  tableCell:      { fontSize: 13, color: COLORS.text },
+  tableCellDone:  { textDecorationLine: 'line-through', color: COLORS.textMuted },
+  tableStatusDot: { width: 16, height: 16, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  tablePriPill:   { borderRadius: 6, paddingHorizontal: 5, paddingVertical: 2, alignSelf: 'center' },
+  tablePriText:   { fontSize: 10, fontWeight: '700' },
 
   // Add project modal
   modalOverlay: { flex: 1, backgroundColor: 'rgba(26,29,46,0.5)', justifyContent: 'flex-end' },

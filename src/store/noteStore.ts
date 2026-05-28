@@ -3,12 +3,19 @@ import { deleteNote, getAllNotes, insertNote, updateNote } from '../database/not
 import type { Note } from '../types';
 import { generateId } from '../utils/constants';
 
+interface NoteOpts {
+  tags?: string[];
+  folder?: string;
+  pinned?: boolean;
+}
+
 interface NoteStore {
   notes: Note[];
   loading: boolean;
   loadAll: () => Promise<void>;
-  addNote: (title: string, content: string) => Promise<Note>;
-  editNote: (id: string, title: string, content: string) => Promise<void>;
+  addNote: (title: string, content: string, opts?: NoteOpts) => Promise<Note>;
+  editNote: (id: string, title: string, content: string, opts?: NoteOpts) => Promise<void>;
+  pinNote: (id: string, pinned: boolean) => Promise<void>;
   removeNote: (id: string) => Promise<void>;
 }
 
@@ -27,11 +34,14 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
     }
   },
 
-  addNote: async (title, content) => {
+  addNote: async (title, content, opts = {}) => {
     const note: Note = {
       id: generateId(),
       title,
       content,
+      tags:   opts.tags   ?? [],
+      folder: opts.folder ?? '',
+      pinned: opts.pinned ?? false,
       createdAt: Date.now(),
       updatedAt: Date.now(),
     };
@@ -40,8 +50,13 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
     return note;
   },
 
-  editNote: async (id, title, content) => {
-    await updateNote({ id, title, content });
+  editNote: async (id, title, content, opts = {}) => {
+    await updateNote({ id, title, content, ...opts });
+    await get().loadAll();
+  },
+
+  pinNote: async (id, pinned) => {
+    await updateNote({ id, pinned });
     await get().loadAll();
   },
 

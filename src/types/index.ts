@@ -30,6 +30,7 @@ export interface Task {
   difficulty?: 1 | 2 | 3 | 4 | 5;
   dependsOn?: string | null;           // ID of the task that blocks this one
   timeLoggedMinutes?: number;          // cumulative focus time logged (minutes)
+  linkedNoteId?: string | null;        // linked note for reference
 }
 
 export interface Project {
@@ -38,6 +39,7 @@ export interface Project {
   description: string;
   color: string;
   createdAt: number;
+  pageContent?: string; // rich markdown notes / wiki page for this project
 }
 
 export interface Reminder {
@@ -64,6 +66,9 @@ export interface Note {
   id: string;
   title: string;
   content: string;
+  tags: string[];       // free-form labels
+  folder: string;       // folder name, '' = no folder
+  pinned: boolean;
   createdAt: number; // unix ms
   updatedAt: number; // unix ms
 }

@@ -38,21 +38,19 @@ export default function BackupSection() {
   return (
     <View style={s.group}>
       <TouchableOpacity style={s.row} onPress={() => setShow('export')}>
-        <Ionicons name="cloud-upload-outline" size={20} color={COLORS.primary} />
         <View style={{ flex: 1 }}>
           <Text style={s.label}>Export encrypted backup</Text>
-          <Text style={s.sub}>AES-encrypted JSON of all data.</Text>
+          <Text style={s.sub}>AES-encrypted file of all your data</Text>
         </View>
-        <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} />
+        <Ionicons name="cloud-upload-outline" size={18} color={COLORS.primary} />
       </TouchableOpacity>
       <View style={s.divider} />
       <TouchableOpacity style={s.row} onPress={() => setShow('import')}>
-        <Ionicons name="cloud-download-outline" size={20} color={COLORS.primary} />
         <View style={{ flex: 1 }}>
           <Text style={s.label}>Restore from backup</Text>
-          <Text style={s.sub}>Replaces all current data.</Text>
+          <Text style={s.sub}>Replaces all current data</Text>
         </View>
-        <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} />
+        <Ionicons name="cloud-download-outline" size={18} color={COLORS.primary} />
       </TouchableOpacity>
 
       <Modal visible={show !== null} transparent animationType="fade" onRequestClose={() => setShow(null)}>
@@ -86,20 +84,20 @@ export default function BackupSection() {
 }
 
 const s = StyleSheet.create({
-  group: { backgroundColor: COLORS.card, borderRadius: 16, marginBottom: 12, ...CARD_SHADOW, overflow: 'hidden' },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14, paddingHorizontal: 16 },
+  group:   { backgroundColor: COLORS.card, borderRadius: 18, marginBottom: 24, ...CARD_SHADOW, overflow: 'hidden' },
+  row:     { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14 },
   divider: { height: 1, backgroundColor: COLORS.cardAlt, marginHorizontal: 16 },
-  label: { fontSize: 15, fontWeight: '600', color: COLORS.text },
-  sub: { fontSize: 12, color: COLORS.textSub, marginTop: 2 },
-  scrim: { flex: 1, backgroundColor: 'rgba(26,29,46,0.55)', justifyContent: 'center', alignItems: 'center', padding: 20 },
-  card: { width: '100%', backgroundColor: COLORS.card, borderRadius: 22, padding: 22, ...CARD_SHADOW },
-  title: { fontSize: 18, fontWeight: '800', color: COLORS.text },
+  label:   { fontSize: 15, fontWeight: '500', color: COLORS.text },
+  sub:     { fontSize: 12, color: COLORS.textMuted, marginTop: 2 },
+  scrim:   { flex: 1, backgroundColor: 'rgba(26,29,46,0.55)', justifyContent: 'center', alignItems: 'center', padding: 20 },
+  card:    { width: '100%', backgroundColor: COLORS.card, borderRadius: 22, padding: 22 },
+  title:   { fontSize: 18, fontWeight: '800', color: COLORS.text },
   cardSub: { fontSize: 13, color: COLORS.textSub, marginTop: 6 },
-  input: { backgroundColor: COLORS.cardAlt, borderRadius: 14, padding: 14, marginTop: 14, fontSize: 15, color: COLORS.text },
-  btnRow: { flexDirection: 'row', gap: 10, marginTop: 16 },
-  btn: { flex: 1, paddingVertical: 14, borderRadius: 14, alignItems: 'center' },
-  btnSec: { backgroundColor: COLORS.cardAlt },
-  btnPri: { backgroundColor: COLORS.primary },
+  input:   { backgroundColor: COLORS.cardAlt, borderRadius: 14, padding: 14, marginTop: 14, fontSize: 15, color: COLORS.text },
+  btnRow:  { flexDirection: 'row', gap: 10, marginTop: 16 },
+  btn:     { flex: 1, paddingVertical: 14, borderRadius: 14, alignItems: 'center' },
+  btnSec:  { backgroundColor: COLORS.cardAlt },
+  btnPri:  { backgroundColor: COLORS.primary },
   btnSecText: { color: COLORS.textSub, fontWeight: '700' },
   btnPriText: { color: '#fff', fontWeight: '700' },
 });

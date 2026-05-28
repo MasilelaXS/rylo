@@ -4,10 +4,30 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import CryptoJS from 'crypto-js';
+import { getRandomValues } from 'expo-crypto';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { getDatabase } from '../database/database';
+
+// ── Patch WordArray.random to use expo-crypto ─────────────────────────────────
+// crypto-js captures `var crypto` once inside an IIFE at module-load time; in
+// Hermes that capture is always undefined. Replacing WordArray.random directly
+// bypasses the captured variable and works unconditionally on Hermes/RN.
+(CryptoJS.lib.WordArray as any).random = (nBytes: number): CryptoJS.lib.WordArray => {
+  const bytes = new Uint8Array(nBytes);
+  getRandomValues(bytes);
+  const words: number[] = [];
+  for (let i = 0; i < nBytes; i += 4) {
+    words.push(
+      ((bytes[i] ?? 0) << 24 |
+       (bytes[i + 1] ?? 0) << 16 |
+       (bytes[i + 2] ?? 0) << 8 |
+       (bytes[i + 3] ?? 0)) >>> 0,
+    );
+  }
+  return CryptoJS.lib.WordArray.create(words, nBytes);
+};
 
 const TABLES = [
   'projects', 'tasks', 'reminders', 'communication_logs',

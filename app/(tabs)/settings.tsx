@@ -2,14 +2,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import * as Speech from 'expo-speech';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Platform, ScrollView, Share, StatusBar, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Platform, ScrollView, StatusBar, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BackgroundImage from '../../src/components/BackgroundImage';
 import BackupSection from '../../src/components/BackupSection';
 import { cancelAllNotifications, getNotificationStatus, requestNotificationPermission, scheduleHourlyReminders, sendTestNotification } from '../../src/notifications/notificationService';
 import { openExactAlarmSettings, requestIgnoreBatteryOptimizations } from '../../src/services/reliabilityService';
-import { useNoteStore } from '../../src/store/noteStore';
-import { useProjectStore } from '../../src/store/projectStore';
 import { useSettingsStore } from '../../src/store/settingsStore';
 import { useTaskStore } from '../../src/store/taskStore';
 import type { ReminderMode } from '../../src/types';
@@ -46,10 +44,6 @@ export default function SettingsScreen() {
   const router   = useRouter();
   const { settings, update } = useSettingsStore();
   const { tasks } = useTaskStore();
-  const { notes } = useNoteStore();
-  const { projects } = useProjectStore();
-  const [exportLoading, setExportLoading] = useState(false);
-
   const [voices,       setVoices]       = useState<Speech.Voice[]>([]);
   const [loadingVoice, setLoadingVoice] = useState(false);
   const [previewingId, setPreviewingId] = useState<string | null>(null);
@@ -441,38 +435,7 @@ export default function SettingsScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* ── Data Export ───────────────────────────────────────── */}
           <Text style={s.sectionLabel}>Data</Text>
-          <View style={s.group}>
-            <TouchableOpacity
-              style={s.row}
-              onPress={async () => {
-                setExportLoading(true);
-                try {
-                  const payload = {
-                    exportedAt: new Date().toISOString(),
-                    tasks,
-                    notes,
-                    projects,
-                  };
-                  const json = JSON.stringify(payload, null, 2);
-                  await Share.share({ message: json, title: 'Rylo Export' });
-                } catch (e) {
-                  Alert.alert('Export failed', 'Could not share data.');
-                } finally {
-                  setExportLoading(false);
-                }
-              }}
-              disabled={exportLoading}
-            >
-              <Text style={s.rowLabel}>Export Data (JSON)</Text>
-              {exportLoading
-                ? <ActivityIndicator size="small" color={COLORS.primary} />
-                : <Ionicons name="share-outline" size={18} color={COLORS.primary} />}
-            </TouchableOpacity>
-          </View>
-
-          <Text style={s.sectionLabel}>Encrypted Backup</Text>
           <BackupSection />
 
           <View style={{ height: 110 }} />
