@@ -182,7 +182,7 @@ export default function DashboardScreen() {
     <BackgroundImage screen="dashboard">
       <SafeAreaView style={s.safe}>
         <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-        <ScrollView style={s.scroll} contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
+        <ScrollView style={s.scroll} contentContainerStyle={[s.content, { paddingBottom: fabBottom + 20 }]} showsVerticalScrollIndicator={false}>
 
           {/* ── Header ─────────────────────────────────────────────── */}
           <View style={s.header}>

@@ -471,7 +471,7 @@ const s = StyleSheet.create({
     borderColor: COLORS.surfaceBorder,
   },
   group: { backgroundColor: COLORS.card, borderRadius: 18, marginBottom: 24, ...CARD_SHADOW, overflow: 'hidden' },
-  row:   { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14 },
+  row:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 14 },
   rowLabel: { fontSize: 15, color: COLORS.text, fontWeight: '500' },
   rowSub:   { fontSize: 12, color: COLORS.textMuted, marginTop: 2 },
 
